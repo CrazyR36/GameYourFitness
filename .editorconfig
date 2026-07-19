@@ -10,6 +10,9 @@ trim_trailing_whitespace = true
 max_line_length = 120
 
 [*.{kt,kts}]
+# Android-Studio-Stil statt ktlint_official: dessen Zwangsumbrueche
+# (multiline-expression-wrapping) kollidieren mit idiomatischem Compose-Code.
+ktlint_code_style = android_studio
 ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.{yml,yaml,toml}]

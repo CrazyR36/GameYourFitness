@@ -14,6 +14,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
     volumes:
+      - ./db/init/auth-ownership.sql:/docker-entrypoint-initdb.d/init-scripts/99-auth-ownership.sql:ro
       - ./db/init/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:ro
       - ./db/init/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
       - ./db/init/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:ro
