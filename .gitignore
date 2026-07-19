@@ -1,0 +1,19 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Android / IDE
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Secrets — niemals committen (CLAUDE.md Abschnitt 8)
+.env
+backend/.env
+
+# Betriebssystem
+.DS_Store

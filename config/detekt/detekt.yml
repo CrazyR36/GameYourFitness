@@ -1,0 +1,15 @@
+# Ergaenzt die detekt-Defaultkonfiguration (buildUponDefaultConfig = true).
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - 'Composable'
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+
+complexity:
+  LongMethod:
+    ignoreAnnotated:
+      - 'Composable'
