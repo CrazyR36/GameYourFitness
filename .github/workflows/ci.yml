@@ -1,8 +1,9 @@
 name: CI
 
+# Nur push: Checks haengen am Commit-SHA und erscheinen auch im PR;
+# ein zusaetzlicher pull_request-Trigger wuerde alles doppelt laufen lassen.
 on:
   push:
-  pull_request:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -88,6 +89,12 @@ jobs:
           docker compose -f backend/docker-compose.yml ps
           docker compose -f backend/docker-compose.yml logs --tail 100
           exit 1
+
+      - name: Diagnose bei Fehlschlag
+        if: failure()
+        run: |
+          docker compose -f backend/docker-compose.yml ps -a
+          docker compose -f backend/docker-compose.yml logs
 
       - name: Stack stoppen
         if: always()

@@ -26,12 +26,13 @@ class TestInfrastructureSmokeTest {
     }
 
     @Test
-    fun `turbine collects flows in tests`() = runTest {
-        flowOf(1, 2, 3).test {
-            assertEquals(1, awaitItem())
-            assertEquals(2, awaitItem())
-            assertEquals(3, awaitItem())
-            awaitComplete()
+    fun `turbine collects flows in tests`() =
+        runTest {
+            flowOf(1, 2, 3).test {
+                assertEquals(1, awaitItem())
+                assertEquals(2, awaitItem())
+                assertEquals(3, awaitItem())
+                awaitComplete()
+            }
         }
-    }
 }
