@@ -15,7 +15,7 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = NightOnBackground,
     onBackground = NightOnBackground,
     onSurface = NightOnSurface,
-    error = AlertRed,
+    error = AlertRed
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -28,7 +28,7 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = DayBackground,
     onBackground = DayOnBackground,
     onSurface = DayOnSurface,
-    error = DayAlertRed,
+    error = DayAlertRed
 )
 
 /**
@@ -36,13 +36,10 @@ private val LightColorScheme = lightColorScheme(
  * deshalb ist [darkTheme] nicht an die Systemeinstellung gekoppelt.
  */
 @Composable
-fun GameYourFitnessTheme(
-    darkTheme: Boolean = true,
-    content: @Composable () -> Unit,
-) {
+fun GameYourFitnessTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = AppTypography,
-        content = content,
+        content = content
     )
 }

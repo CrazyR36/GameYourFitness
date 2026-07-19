@@ -12,24 +12,24 @@ val AppTypography = Typography(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
-        letterSpacing = 4.sp,
+        letterSpacing = 4.sp
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
-        letterSpacing = 2.sp,
+        letterSpacing = 2.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.5.sp
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
-        letterSpacing = 1.5.sp,
-    ),
+        letterSpacing = 1.5.sp
+    )
 )

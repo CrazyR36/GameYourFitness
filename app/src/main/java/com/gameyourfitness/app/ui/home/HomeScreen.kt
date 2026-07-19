@@ -31,7 +31,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .testTag("home_screen"),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -40,14 +40,14 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 .border(Dimens.systemWindowBorder, MaterialTheme.colorScheme.primary)
                 .padding(Dimens.systemWindowPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing),
+            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing)
         ) {
             Text(
                 text = stringResource(R.string.home_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("home_title"),
+                modifier = Modifier.testTag("home_title")
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
             Text(
@@ -55,7 +55,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("home_subtitle"),
+                modifier = Modifier.testTag("home_subtitle")
             )
         }
     }
