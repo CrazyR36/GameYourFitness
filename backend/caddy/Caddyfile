@@ -1,0 +1,28 @@
+# Lokales Gateway vor dem Supabase-Stack. Fuer den Server-Betrieb (Issue #13)
+# wird hieraus ein Site-Block mit Domain + automatischem TLS.
+{
+	auto_https off
+}
+
+:8000 {
+	handle /health {
+		respond "ok" 200
+	}
+
+	handle_path /auth/v1/* {
+		reverse_proxy auth:9999
+	}
+
+	handle_path /rest/v1/* {
+		reverse_proxy rest:3000
+	}
+
+	handle_path /storage/v1/* {
+		reverse_proxy storage:5000
+	}
+
+	handle_path /realtime/v1/* {
+		rewrite * /socket{uri}
+		reverse_proxy realtime:4000
+	}
+}
