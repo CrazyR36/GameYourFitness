@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Bewusst doppelt zu Color.kt (NightBackground) gepflegt: Compose-Farben
+         sind aus XML nicht referenzierbar, und ohne passenden windowBackground
+         gibt es beim Kaltstart einen sichtbaren Farbsprung. -->
+    <color name="night_background">#FF0B0F1A</color>
+
     <style name="Theme.GameYourFitness" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowBackground">@color/night_background</item>
     </style>
 </resources>

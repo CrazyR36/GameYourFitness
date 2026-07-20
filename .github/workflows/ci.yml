@@ -5,6 +5,9 @@ name: CI
 on:
   push:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -39,10 +42,18 @@ jobs:
         run: |
           if ls app/src/test/screenshots/*.png >/dev/null 2>&1; then
             ./gradlew verifyRoborazziDebug
+          elif [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "::error::Keine Screenshot-Goldens auf main — der Feature-Branch haette sie liefern muessen."
+            exit 1
           else
-            echo "Keine Goldens vorhanden – nehme Erstaufnahme auf und committe sie."
+            # Bootstrap fuer neue Screens, wenn lokal kein Build moeglich ist:
+            # aufnehmen, im selben (sichtbaren) Lauf verifizieren, dann committen.
+            # Der Bot-Push triggert keinen eigenen CI-Lauf (GITHUB_TOKEN), deshalb
+            # beweist der Verify-Schritt in diesem Lauf, was gepusht wird.
+            echo "Keine Goldens vorhanden – nehme Erstaufnahme auf, verifiziere und committe sie."
             ./gradlew recordRoborazziDebug
-            if [ "${GITHUB_REF_NAME}" != "main" ] && [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            ./gradlew verifyRoborazziDebug
+            if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git add app/src/test/screenshots
@@ -76,7 +87,7 @@ jobs:
       - name: Auf Erreichbarkeit warten (Caddy, GoTrue, PostgREST, Storage)
         run: |
           ANON_KEY=$(grep '^ANON_KEY=' backend/.env | cut -d= -f2-)
-          code() { curl -s -o /dev/null -w '%{http_code}' "$@" || echo "000"; }
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@" || true; }
           for i in $(seq 1 60); do
             H=$(code http://localhost:8000/health)
             A=$(code http://localhost:8000/auth/v1/health)
