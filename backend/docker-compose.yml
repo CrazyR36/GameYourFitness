@@ -91,7 +91,9 @@ services:
       ERL_AFLAGS: -proto_dist inet_tcp
       DNS_NODES: "''"
       RLIMIT_NOFILE: "10000"
+      # Aeltere Realtime-Versionen lesen FLY_APP_NAME, neuere APP_NAME — beide setzen.
       APP_NAME: realtime
+      FLY_APP_NAME: realtime
       SEED_SELF_HOST: "true"
     healthcheck:
       test:

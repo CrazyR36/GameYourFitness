@@ -73,13 +73,17 @@ jobs:
           cp backend/.env.example backend/.env
           docker compose -f backend/docker-compose.yml up -d --quiet-pull
 
-      - name: Auf Erreichbarkeit warten (Caddy, GoTrue, PostgREST)
+      - name: Auf Erreichbarkeit warten (Caddy, GoTrue, PostgREST, Storage)
         run: |
           ANON_KEY=$(grep '^ANON_KEY=' backend/.env | cut -d= -f2-)
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@" || echo "000"; }
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8000/health >/dev/null 2>&1 &&
-               curl -fsS http://localhost:8000/auth/v1/health >/dev/null 2>&1 &&
-               curl -fsS -H "apikey: ${ANON_KEY}" -H "Authorization: Bearer ${ANON_KEY}" http://localhost:8000/rest/v1/ >/dev/null 2>&1; then
+            H=$(code http://localhost:8000/health)
+            A=$(code http://localhost:8000/auth/v1/health)
+            R=$(code -H "apikey: ${ANON_KEY}" -H "Authorization: Bearer ${ANON_KEY}" http://localhost:8000/rest/v1/)
+            S=$(code http://localhost:8000/storage/v1/status)
+            echo "Versuch ${i}: gateway=${H} auth=${A} rest=${R} storage=${S}"
+            if [ "$H" = "200" ] && [ "$A" = "200" ] && [ "$R" = "200" ] && [ "$S" = "200" ]; then
               echo "Stack ist erreichbar."
               exit 0
             fi
@@ -87,7 +91,6 @@ jobs:
           done
           echo "Stack wurde nicht gesund:"
           docker compose -f backend/docker-compose.yml ps
-          docker compose -f backend/docker-compose.yml logs --tail 100
           exit 1
 
       - name: Diagnose bei Fehlschlag
