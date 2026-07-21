@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nur im Debug-Build: erlaubt Klartext-HTTP zum lokalen Supabase-Stack
+  (Emulator → Host-Docker via http://10.0.2.2:8000). Der Release-Build
+  (Server-Betrieb, Issue #13) laeuft ausschliesslich ueber HTTPS.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:ignore="UnusedAttribute" />
+
+</manifest>

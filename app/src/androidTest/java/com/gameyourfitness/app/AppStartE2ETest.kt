@@ -1,19 +1,26 @@
 package com.gameyourfitness.app
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.gameyourfitness.app.data.auth.SessionStore
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * E2E-Slice #1: App startet und zeigt den Startbildschirm.
- * Interagiert ausschliesslich ueber sichtbare UI-Elemente (TestTag/Text).
+ * E2E-Slice #1 (angepasst in Slice #2): Die App startet ohne Crash.
+ * Seit dem Login-Slice ist der Startbildschirm fuer nicht angemeldete Nutzer
+ * der Login-Screen — der Test prueft daher diesen (Begruendung im Issue #2).
  */
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
@@ -22,15 +29,32 @@ class AppStartE2ETest {
     val hiltRule = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val composeRule = createEmptyComposeRule()
+
+    @Inject
+    lateinit var sessionStore: SessionStore
+
+    private var scenario: ActivityScenario<MainActivity>? = null
+
+    @Before
+    fun setUp() {
+        hiltRule.inject()
+        runBlocking { sessionStore.clear() }
+    }
+
+    @After
+    fun tearDown() {
+        scenario?.close()
+    }
 
     @Test
-    fun test_appStartsAndShowsHomeScreen() {
-        val title = composeRule.activity.getString(R.string.home_title)
-        val subtitle = composeRule.activity.getString(R.string.home_subtitle)
+    fun test_appStartsAndShowsLoginScreenWhenSignedOut() {
+        scenario = ActivityScenario.launch(MainActivity::class.java)
 
-        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
-        composeRule.onNodeWithText(title).assertIsDisplayed()
-        composeRule.onNodeWithText(subtitle).assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("login_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("login_google_button").assertIsDisplayed()
     }
 }

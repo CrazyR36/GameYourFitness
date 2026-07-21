@@ -3,7 +3,7 @@ package com.gameyourfitness.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.gameyourfitness.app.ui.home.HomeScreen
+import com.gameyourfitness.app.ui.AppRoot
 import com.gameyourfitness.app.ui.theme.GameYourFitnessTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -13,7 +13,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             GameYourFitnessTheme {
-                HomeScreen()
+                AppRoot()
             }
         }
     }

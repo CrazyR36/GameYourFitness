@@ -53,15 +53,47 @@ curl http://localhost:8000/auth/v1/health
 Secrets liegen ausschließlich in `backend/.env` (gitignored). Die Werte aus
 `.env.example` sind öffentlich bekannte Demo-Schlüssel — niemals auf einem Server verwenden.
 
-### Google-OAuth (ab Slice #2 relevant)
+### Google-OAuth (Slice #2)
 
 Es werden **zwei** OAuth-Client-IDs in der Google Cloud Console benötigt — das ist die
 häufigste Fehlerquelle:
 
-1. **Android-Client** mit Package `com.gameyourfitness.app` + SHA-1-Fingerprint des Signing-Keys
-2. **Web-Client** — dessen Client-ID/Secret bekommt GoTrue
+1. **Android-Client** mit Package `com.gameyourfitness.app` + SHA-1-Fingerprint des Signing-Keys.
+   Diese ID akzeptiert GoTrue zusätzlich als Audience des ID-Tokens
+   (`GOOGLE_ANDROID_CLIENT_ID` in `backend/.env`).
+2. **Web-Client** — dessen Client-ID/Secret bekommt GoTrue (`GOOGLE_WEB_CLIENT_ID` /
+   `GOOGLE_WEB_CLIENT_SECRET`). **Dieselbe** Web-Client-ID nutzt die App als
+   `serverClientId` im Credential Manager (Gradle-Property `GOOGLE_WEB_CLIENT_ID`).
 
-Details folgen im README, sobald Slice #2 umgesetzt wird.
+Ablauf: Die App holt per Credential Manager ein Google-ID-Token (Audience = Web-Client-ID)
+und tauscht es bei GoTrue gegen eine Session (`POST /auth/v1/token?grant_type=id_token`).
+GoTrue prüft die Signatur gegen Googles JWKS und die Audience gegen die konfigurierten
+Client-IDs.
+
+**Konfiguration:**
+
+- Backend (`backend/.env`): `GOTRUE_EXTERNAL_GOOGLE_ENABLED=true`, `GOOGLE_WEB_CLIENT_ID`,
+  `GOOGLE_WEB_CLIENT_SECRET`, `GOOGLE_ANDROID_CLIENT_ID` setzen.
+- App-Build: Web-Client-ID und Backend-URL als Gradle-Properties übergeben, z. B.
+  `./gradlew assembleRelease -PGOOGLE_WEB_CLIENT_ID=… -PSUPABASE_URL=https://…`
+  (oder in `~/.gradle/gradle.properties`). Der Debug-Build zeigt standardmäßig auf
+  `http://10.0.2.2:8000` (lokaler Stack vom Emulator aus).
+
+**Tests:** Google-SSO wird gemockt (GoTrue kann lokal keine echten Google-Signaturen
+prüfen). Die E2E-Tests ersetzen nur die ID-Token-Beschaffung und den Token-Tausch; die
+Session holen sie sich über einen echten GoTrue-Signup. Session-Persistenz, Token-Refresh,
+Logout und die RLS-Policies laufen echt gegen den Stack.
+
+## Datenbank-Migrationen
+
+Das Schema entsteht ausschließlich über versionierte SQL-Migrationen in
+`backend/migrations/` (fortlaufend nummeriert, idempotent). Anwenden auf den laufenden
+Stack:
+
+```bash
+backend/scripts/migrate.sh      # wendet alle Migrationen der Reihe nach an
+backend/scripts/test-rls.sh     # prüft die RLS-Policies mit zwei echten Nutzern
+```
 
 ## CI (GitHub Actions)
 
@@ -69,9 +101,11 @@ Läuft bei jedem Push (`.github/workflows/ci.yml`), drei Jobs:
 
 1. **checks** — Build, ktlint, detekt, Unit-Tests, Screenshot-Verify.
    Fehlen die Goldens (Erstlauf), werden sie aufgenommen und auf den Branch committet.
-2. **backend-stack** — startet den kompletten Supabase-Stack mit leerer Datenbank und
-   prüft die Erreichbarkeit von Gateway, GoTrue und PostgREST (beweist: Stack + künftige
-   Migrationen laufen auf einer leeren DB hoch).
-3. **e2e** — startet einen Android-Emulator (API 34) und führt die Compose-E2E-Tests aus.
+2. **backend-stack** — startet den kompletten Supabase-Stack mit leerer Datenbank, prüft
+   die Erreichbarkeit von Gateway, GoTrue und PostgREST, wendet die Migrationen **zweimal**
+   an (beweist Idempotenz) und führt den RLS-Negativtest aus.
+3. **e2e** — startet den Backend-Stack samt Migrationen, dann einen Android-Emulator
+   (API 34), und führt die Compose-E2E-Tests gegen das echte Backend aus (Emulator erreicht
+   den Host-Stack über `10.0.2.2`).
 
 Ein roter Build wird nie gemergt.

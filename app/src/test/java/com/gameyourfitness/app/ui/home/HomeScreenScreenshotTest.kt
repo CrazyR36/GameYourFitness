@@ -27,7 +27,7 @@ class HomeScreenScreenshotTest {
     fun homeScreen_dark() {
         composeRule.setContent {
             GameYourFitnessTheme(darkTheme = true) {
-                HomeScreen()
+                HomeScreen(onSignOut = {})
             }
         }
         composeRule.onRoot().captureRoboImage("src/test/screenshots/homeScreen_dark.png")
@@ -37,7 +37,7 @@ class HomeScreenScreenshotTest {
     fun homeScreen_light() {
         composeRule.setContent {
             GameYourFitnessTheme(darkTheme = false) {
-                HomeScreen()
+                HomeScreen(onSignOut = {})
             }
         }
         composeRule.onRoot().captureRoboImage("src/test/screenshots/homeScreen_light.png")

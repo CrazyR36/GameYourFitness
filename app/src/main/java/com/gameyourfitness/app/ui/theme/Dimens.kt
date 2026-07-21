@@ -8,4 +8,6 @@ object Dimens {
     val systemWindowPadding = 24.dp
     val systemWindowBorder = 1.dp
     val contentSpacing = 16.dp
+    val inlineProgressSize = 20.dp
+    val progressStroke = 2.dp
 }
