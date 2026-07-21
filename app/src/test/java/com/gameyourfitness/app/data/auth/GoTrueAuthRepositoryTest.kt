@@ -124,10 +124,12 @@ class GoTrueAuthRepositoryTest {
         fun `abgebrochener Google-Dialog liefert Cancelled ohne Backend-Aufruf`() = runTest {
             coEvery { google.fetchIdToken() } returns GoogleIdTokenResult.Cancelled
             val repo = repository()
+            repo.restoreSession() // leerer Store → SignedOut (wie im echten Flow vor dem Klick)
 
             val result = repo.signInWithGoogle()
 
             assertEquals(SignInResult.Cancelled, result)
+            // Abbruch meldet niemanden an und aendert den bestehenden Zustand nicht.
             assertEquals(AuthState.SignedOut, repo.authState.value)
             verify { api wasNot Called }
         }
@@ -145,8 +147,10 @@ class GoTrueAuthRepositoryTest {
             coEvery { google.fetchIdToken() } returns GoogleIdTokenResult.Success("id-token")
             coEvery { api.signInWithIdToken(any()) } throws IOException("kein Netz")
             val repo = repository()
+            repo.restoreSession() // leerer Store → SignedOut
 
             assertEquals(SignInResult.NetworkError, repo.signInWithGoogle())
+            // Fehlgeschlagener Login meldet niemanden an: Zustand bleibt SignedOut.
             assertEquals(AuthState.SignedOut, repo.authState.value)
         }
 

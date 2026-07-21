@@ -32,6 +32,9 @@ signup() {
     echo "$token $uid"
 }
 
+# Anzahl Elemente, falls Array — sonst -1 (z. B. Fehlerobjekt bei Permission-Denied).
+array_len() { jq 'if type=="array" then length else -1 end'; }
+
 rand="$RANDOM$RANDOM"
 read -r TOKEN_A UID_A <<<"$(signup "rls-a-$rand@example.com")"
 read -r TOKEN_B UID_B <<<"$(signup "rls-b-$rand@example.com")"
@@ -44,47 +47,64 @@ auth_get() {
         -H "Authorization: Bearer $token"
 }
 
-# 1) A sieht genau die eigene Zeile.
+status() {
+    # status <method> <url> [extra curl args...]
+    local method="$1" url="$2"
+    shift 2
+    curl -s -o /dev/null -w '%{http_code}' -X "$method" "$url" \
+        -H "apikey: $ANON_KEY" "$@"
+}
+
+# 1) A sieht genau die eigene Zeile (vom Signup-Trigger angelegt).
 rows="$(auth_get "$TOKEN_A" "?select=user_id")"
-count="$(echo "$rows" | jq 'length')"
-[ "$count" = "1" ] || fail "A sollte genau 1 Profil sehen, sah $count: $rows"
+count="$(echo "$rows" | array_len)"
+[ "$count" = "1" ] || fail "A sollte genau 1 Profil sehen, sah '$count': $rows"
 seen="$(echo "$rows" | jq -r '.[0].user_id')"
 [ "$seen" = "$UID_A" ] || fail "A sieht fremdes Profil ($seen statt $UID_A)"
 pass "A sieht ausschliesslich die eigene Profilzeile"
 
 # 2) A kann die Zeile von B nicht lesen (gezielter Filter → leer).
 rows="$(auth_get "$TOKEN_A" "?user_id=eq.$UID_B")"
-count="$(echo "$rows" | jq 'length')"
+count="$(echo "$rows" | array_len)"
 [ "$count" = "0" ] || fail "A konnte B's Zeile lesen: $rows"
 pass "A kann B's Profil nicht lesen (RLS-select blockiert)"
 
-# 3) A kann B's Zeile nicht aendern (0 betroffene Zeilen; Return=representation → leer).
+# 3) A kann B's Zeile nicht aendern: PATCH auf eine echte Spalte, RLS filtert die
+#    Zeile weg → 0 betroffene Zeilen (Return=representation liefert leeres Array).
 resp="$(curl -s -X PATCH "$BASE_URL/rest/v1/profiles?user_id=eq.$UID_B" \
     -H "apikey: $ANON_KEY" -H "Authorization: Bearer $TOKEN_A" \
     -H "Content-Type: application/json" -H "Prefer: return=representation" \
-    -d '{}')"
-count="$(echo "$resp" | jq 'if type=="array" then length else 1 end')"
-[ "$count" = "0" ] || fail "A konnte B's Zeile aendern: $resp"
+    -d '{"created_at":"2020-01-01T00:00:00+00:00"}')"
+count="$(echo "$resp" | array_len)"
+[ "$count" = "0" ] || fail "A konnte B's Zeile aendern (erwartet 0 Zeilen): $resp"
 pass "A kann B's Profil nicht aendern (RLS-update blockiert)"
 
-# 4) Client-INSERT ist generell verboten (keine insert-Policy, kein Grant).
-code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE_URL/rest/v1/profiles" \
-    -H "apikey: $ANON_KEY" -H "Authorization: Bearer $TOKEN_A" \
-    -H "Content-Type: application/json" \
+# 4) Client-INSERT ist verboten (keine insert-Policy + Grant zurueckgenommen).
+code="$(status POST "$BASE_URL/rest/v1/profiles" \
+    -H "Authorization: Bearer $TOKEN_A" -H "Content-Type: application/json" \
     -d "{\"user_id\":\"$UID_A\"}")"
-[ "$code" = "401" ] || [ "$code" = "403" ] || fail "Client-INSERT nicht verboten (HTTP $code)"
-pass "Client-INSERT ist verboten (HTTP $code)"
+case "$code" in
+    401 | 403) pass "Client-INSERT ist verboten (HTTP $code)" ;;
+    *) fail "Client-INSERT nicht verboten (HTTP $code)" ;;
+esac
 
-# 5) Client-DELETE ist generell verboten.
-code="$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "$BASE_URL/rest/v1/profiles?user_id=eq.$UID_A" \
-    -H "apikey: $ANON_KEY" -H "Authorization: Bearer $TOKEN_A")"
-[ "$code" = "401" ] || [ "$code" = "403" ] || fail "Client-DELETE nicht verboten (HTTP $code)"
-pass "Client-DELETE ist verboten (HTTP $code)"
+# 5) Client-DELETE ist verboten.
+code="$(status DELETE "$BASE_URL/rest/v1/profiles?user_id=eq.$UID_A" \
+    -H "Authorization: Bearer $TOKEN_A")"
+case "$code" in
+    401 | 403) pass "Client-DELETE ist verboten (HTTP $code)" ;;
+    *) fail "Client-DELETE nicht verboten (HTTP $code)" ;;
+esac
 
-# 6) Anonymer Zugriff (nur Anon-Key, kein Nutzer-JWT) sieht nichts.
+# 6) Anonymer Zugriff (nur Anon-Key, kein Nutzer-JWT) sieht nichts. Ohne Grant an
+#    anon antwortet PostgREST mit Permission-Denied (Fehlerobjekt) — auch das ist
+#    "sieht keine Profile". Ein leeres Array wird ebenfalls akzeptiert.
 rows="$(curl -s "$BASE_URL/rest/v1/profiles?select=user_id" -H "apikey: $ANON_KEY")"
-count="$(echo "$rows" | jq 'if type=="array" then length else -1 end')"
-[ "$count" = "0" ] || fail "Anonymer Zugriff sah Profile: $rows"
-pass "Anonymer Zugriff sieht keine Profile"
+count="$(echo "$rows" | array_len)"
+if [ "$count" = "0" ] || [ "$count" = "-1" ]; then
+    pass "Anonymer Zugriff sieht keine Profile (Antwort: $rows)"
+else
+    fail "Anonymer Zugriff sah $count Profil(e): $rows"
+fi
 
 echo "✅ Alle RLS-Negativtests bestanden."

@@ -37,8 +37,12 @@ create policy profiles_update_own
 -- Bewusst KEINE insert/delete-Policy: ohne Policy ist beides fuer authenticated
 -- verboten. Das Anlegen uebernimmt der security-definer-Trigger.
 
--- Grants: RLS wirkt nur, wenn die Rolle ueberhaupt Tabellenrechte hat. Insert/
--- Delete werden nicht gewaehrt — doppelte Absicherung zusaetzlich zu den Policies.
+-- Grants: RLS wirkt nur, wenn die Rolle ueberhaupt Tabellenrechte hat.
+-- Das Supabase-Image vergibt per ALTER DEFAULT PRIVILEGES teils breite Rechte an
+-- anon/authenticated — deshalb erst zuruecknehmen, dann gezielt neu vergeben,
+-- damit die Garantie "kein Client-Insert/Delete" nicht von Default-Grants abhaengt.
+revoke all on public.profiles from anon;
+revoke all on public.profiles from authenticated;
 grant select, update on public.profiles to authenticated;
 
 -- 3) Automatisches Anlegen des Profils bei Registrierung ---------------------
