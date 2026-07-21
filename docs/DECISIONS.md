@@ -135,3 +135,19 @@ Konsequenzen, Issue-Referenz.
 - **Konsequenzen:** Navigation-Compose kommt, sobald mehrere echte Ziele existieren
   (voraussichtlich Slice #3/#4). Der Schalter in `AppRoot` ist dann leicht zu ersetzen.
 - **Issue:** #2
+
+## 2026-07-21 — RLS-Tabellen: Default-Grants explizit zurücknehmen
+
+- **Entscheidung:** Jede neue Tabelle nimmt zuerst `revoke all ... from anon, authenticated`
+  und vergibt danach nur die tatsächlich benötigten Rechte. RLS-Policies allein genügen nicht.
+- **Alternativen:** Sich auf „keine Policy ⇒ kein Zugriff" verlassen.
+- **Begründung:** Das self-hosted Supabase-Postgres-Image vergibt `anon`/`authenticated`
+  per `ALTER DEFAULT PRIVILEGES IN SCHEMA public` breite Tabellenrechte (u. a. INSERT/DELETE).
+  Eine Tabelle „ohne Policy" ist damit **nicht** automatisch dicht: Ein DELETE ohne passende
+  Policy trifft nur RLS, löscht 0 Zeilen und liefert **HTTP 204 „erfolgreich"** statt eines
+  Verbots — im Slice #2 durch den RLS-Negativtest aufgedeckt (DELETE lieferte 204). Erst das
+  Entziehen des Grants führt zu echtem „permission denied" (403).
+- **Konsequenzen:** Muster für alle künftigen Schema-Slices; der RLS-Negativtest prüft neben
+  Fremd-Lese-/Schreibzugriff explizit die HTTP-Codes von Client-INSERT/DELETE. Als Regel in
+  `CLAUDE.md` (Abschnitt 8) vorgeschlagen.
+- **Issue:** #2
