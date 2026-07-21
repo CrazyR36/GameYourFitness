@@ -3,9 +3,17 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+      allowBackup=false: Die Session (Access-/Refresh-Token) liegt im DataStore
+      "auth_session" unverschluesselt. Android Auto Backup wuerde sie in die Cloud
+      sichern und auf einem Fremdgeraet wiederherstellbar machen (Session-Hijacking;
+      Session koennte einen Logout ueberleben). Kein Backup-Feature noetig → komplett aus.
+      Falls spaeter Backup gewuenscht ist: gezielt via dataExtractionRules/fullBackupContent
+      die auth_session-Datei ausschliessen (siehe docs/DECISIONS.md, #2).
+    -->
     <application
         android:name=".GameYourFitnessApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.GameYourFitness">

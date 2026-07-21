@@ -151,3 +151,20 @@ Konsequenzen, Issue-Referenz.
   Fremd-Lese-/Schreibzugriff explizit die HTTP-Codes von Client-INSERT/DELETE. Als Regel in
   `CLAUDE.md` (Abschnitt 8) vorgeschlagen.
 - **Issue:** #2
+
+## 2026-07-21 — `allowBackup=false` wegen unverschlüsselter Session-Token
+
+- **Entscheidung:** Die App setzt `android:allowBackup="false"`.
+- **Alternativen:** Backup an lassen und die `auth_session`-Datei per
+  `dataExtractionRules` (API 31+) / `fullBackupContent` (API ≤30) ausschließen; Token
+  verschlüsselt ablegen (z. B. EncryptedSharedPreferences/Tink).
+- **Begründung:** Die Session (Access-/Refresh-Token) liegt im DataStore Preferences
+  **unverschlüsselt**. Mit `allowBackup=true` sichert Android Auto Backup sie in die Google-
+  Cloud; sie ließe sich auf einem Fremdgerät wiederherstellen (Session-Hijacking) und könnte
+  eine Session **nach dem Logout** wieder einspielen. In einem Auth-Slice ist das genau die
+  Datenschutz-/Secrets-Lücke aus CLAUDE.md Abschnitt 8. Da noch kein Backup-Feature gebraucht
+  wird, ist die vollständige Abschaltung die einfachste dichte Lösung (PR #15-Review).
+- **Konsequenzen:** Kein App-Datentransfer/Cloud-Restore. Sobald Backup gewünscht ist (z. B.
+  für nicht-sensible Präferenzen), muss es gezielt aktiviert werden **mit** Ausschluss der
+  `auth_session`-Datei oder verschlüsselter Token-Ablage — nicht pauschal `allowBackup=true`.
+- **Issue:** #2
