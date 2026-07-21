@@ -79,3 +79,59 @@ Konsequenzen, Issue-Referenz.
 - **Konsequenzen:** Neue Screenshot-Tests verwenden JUnit-4-Annotationen
   (`org.junit.Test` + `@RunWith(RobolectricTestRunner)`), reine Domänentests JUnit 5.
 - **Issue:** #1
+
+## 2026-07-21 — Handgeschriebener GoTrue-Client statt supabase-kt-SDK
+
+- **Entscheidung:** Der Backend-Zugriff für Auth erfolgt über einen schlanken, selbst
+  geschriebenen GoTrue-Client (OkHttp + kotlinx.serialization) hinter dem
+  `AuthRepository`-Interface im `domain`-Layer.
+- **Alternativen:** `supabase-kt` (Community-SDK, Ktor-basiert), Retrofit.
+- **Begründung:** Der Login-Slice braucht genau drei GoTrue-Endpunkte (`token?grant_type=
+  id_token`, `token?grant_type=refresh_token`, `logout`). Das SDK zieht die komplette
+  Ktor-Client-Kette plus eigene Modellwelt herein — unverhältnismäßig für drei Requests und
+  gegen die Slice-Regel „nur so viel bauen wie nötig" (CLAUDE.md Abschnitt 1). OkHttp ist
+  klein und battle-tested.
+- **Konsequenzen:** Endpunkte/DTOs werden pro Slice erweitert. Das `AuthRepository`-Interface
+  hält die Wahl austauschbar — falls später breite Supabase-Nutzung (Realtime, Storage-SDK)
+  kommt, kann die Implementierung ohne UI-Änderung auf das SDK wechseln.
+- **Issue:** #2
+
+## 2026-07-21 — Mock-Grenze für Google-SSO liegt in der data-Schicht
+
+- **Entscheidung:** In E2E-Tests werden nur zwei Dinge ersetzt: die ID-Token-Beschaffung
+  (`GoogleIdTokenClient` → Fake) und der Token-Tausch (`GoTrueApi.signInWithIdToken` →
+  echter GoTrue-Signup per E-Mail/Passwort). Alles andere — Session, Refresh, Logout,
+  Persistenz, Profil-Trigger, RLS — läuft echt gegen den Stack.
+- **Alternativen:** Kompletten Auth-Flow faken; echtes Google-ID-Token in CI erzeugen.
+- **Begründung:** GoTrue validiert Google-ID-Tokens kryptografisch gegen Googles JWKS; ein
+  lokal erzeugtes Token kann ein echtes GoTrue nicht akzeptieren. Die einzige testbare
+  Grenze ist deshalb die data-Schicht. So bleibt „Google-SSO gemockt, GoTrue echt"
+  (CLAUDE.md/DECISIONS #4) maximal ehrlich.
+- **Konsequenzen:** `GoogleAuthModule` und `GoTrueApiModule` sind eigene Hilt-Module, damit
+  `@TestInstallIn` genau diese Bindings ersetzt. GoTrue braucht in der Testumgebung
+  E-Mail-Signup mit Autoconfirm (bereits aktiv).
+- **Issue:** #2
+
+## 2026-07-21 — Session-Refresh: Netzfehler ≠ Logout
+
+- **Entscheidung:** Beim App-Start wird eine abgelaufene Session per Refresh-Token erneuert.
+  Lehnt GoTrue den Refresh-Token ab (HTTP-Fehler), wird abgemeldet und die Session gelöscht.
+  Bei reinen Netzwerkfehlern bleibt der Nutzer angemeldet (Session behalten, Refresh beim
+  nächsten Anlauf).
+- **Alternativen:** Bei jedem Refresh-Fehler abmelden.
+- **Begründung:** „Kein Netz" ist kein „ungültige Sitzung". Abmelden bei jedem Offline-Start
+  wäre nutzerfeindlich und widerspricht dem Anti-Frust-Prinzip (CLAUDE.md Abschnitt 6).
+- **Konsequenzen:** Access-Token gilt inkl. 60-s-Sicherheitsfenster als abgelaufen, damit es
+  nie „auf den letzten Drücker" verwendet wird. Durch Unit-Tests abgesichert.
+- **Issue:** #2
+
+## 2026-07-21 — Navigation ohne Navigation-Library (vorerst)
+
+- **Entscheidung:** Zwischen Login- und Startbildschirm wird im Root-Composable anhand des
+  Auth-Zustands (`AuthState`) umgeschaltet, ohne Navigation-Compose.
+- **Alternativen:** Navigation-Compose von Anfang an.
+- **Begründung:** Es gibt genau zwei Zustände und kein echtes Navigationsziel/Backstack.
+  Eine Navigations-Library wäre Vorratsarbeit (CLAUDE.md Abschnitt 1).
+- **Konsequenzen:** Navigation-Compose kommt, sobald mehrere echte Ziele existieren
+  (voraussichtlich Slice #3/#4). Der Schalter in `AppRoot` ist dann leicht zu ersetzen.
+- **Issue:** #2

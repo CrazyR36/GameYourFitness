@@ -88,6 +88,7 @@ jobs:
         run: |
           ANON_KEY=$(grep '^ANON_KEY=' backend/.env | cut -d= -f2-)
           code() { curl -s -o /dev/null -w '%{http_code}' "$@" || true; }
+          ok=0
           for i in $(seq 1 60); do
             H=$(code http://localhost:8000/health)
             A=$(code http://localhost:8000/auth/v1/health)
@@ -96,13 +97,25 @@ jobs:
             echo "Versuch ${i}: gateway=${H} auth=${A} rest=${R} storage=${S}"
             if [ "$H" = "200" ] && [ "$A" = "200" ] && [ "$R" = "200" ] && [ "$S" = "200" ]; then
               echo "Stack ist erreichbar."
-              exit 0
+              ok=1
+              break
             fi
             sleep 5
           done
-          echo "Stack wurde nicht gesund:"
-          docker compose -f backend/docker-compose.yml ps
-          exit 1
+          if [ "$ok" != "1" ]; then
+            echo "Stack wurde nicht gesund:"
+            docker compose -f backend/docker-compose.yml ps
+            exit 1
+          fi
+
+      - name: Migrationen anwenden (zweimal — beweist Idempotenz)
+        run: |
+          backend/scripts/migrate.sh
+          echo "— zweiter Lauf (muss folgenlos durchlaufen) —"
+          backend/scripts/migrate.sh
+
+      - name: RLS-Negativtest (zwei echte Nutzer, Fremdzugriff verboten)
+        run: backend/scripts/test-rls.sh
 
       - name: Diagnose bei Fehlschlag
         if: failure()
@@ -134,6 +147,29 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Backend-Stack fuer die E2E-Tests starten
+        run: |
+          cp backend/.env.example backend/.env
+          docker compose -f backend/docker-compose.yml up -d --quiet-pull
+
+      - name: Auf Backend-Erreichbarkeit warten
+        run: |
+          ANON_KEY=$(grep '^ANON_KEY=' backend/.env | cut -d= -f2-)
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@" || true; }
+          ok=0
+          for i in $(seq 1 60); do
+            H=$(code http://localhost:8000/health)
+            A=$(code http://localhost:8000/auth/v1/health)
+            R=$(code -H "apikey: ${ANON_KEY}" -H "Authorization: Bearer ${ANON_KEY}" http://localhost:8000/rest/v1/)
+            echo "Versuch ${i}: gateway=${H} auth=${A} rest=${R}"
+            if [ "$H" = "200" ] && [ "$A" = "200" ] && [ "$R" = "200" ]; then ok=1; break; fi
+            sleep 5
+          done
+          [ "$ok" = "1" ] || { docker compose -f backend/docker-compose.yml logs; exit 1; }
+
+      - name: Migrationen anwenden
+        run: backend/scripts/migrate.sh
+
       - name: E2E-Tests auf Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -144,6 +180,10 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: ./gradlew connectedDebugAndroidTest
 
+      - name: Backend-Diagnose bei Fehlschlag
+        if: failure()
+        run: docker compose -f backend/docker-compose.yml logs
+
       - name: E2E-Berichte hochladen
         if: failure()
         uses: actions/upload-artifact@v4
@@ -151,3 +191,7 @@ jobs:
           name: e2e-test-reports
           path: app/build/reports/androidTests/
           if-no-files-found: ignore
+
+      - name: Backend-Stack stoppen
+        if: always()
+        run: docker compose -f backend/docker-compose.yml down -v

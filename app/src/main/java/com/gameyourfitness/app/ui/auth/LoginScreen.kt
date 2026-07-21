@@ -1,5 +1,6 @@
-package com.gameyourfitness.app.ui.home
+package com.gameyourfitness.app.ui.auth
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -8,9 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,16 +27,21 @@ import com.gameyourfitness.app.R
 import com.gameyourfitness.app.ui.theme.Dimens
 
 /**
- * Startbildschirm nach dem Login. Stateless — bekommt den Abmelden-Callback.
- * Kuenftige Slices reichen echten Charakter-State herein (#3).
+ * Login-Screen im "System-Fenster"-Stil. Stateless: bekommt State + Callback,
+ * damit er einzeln testbar und screenshot-faehig ist (CLAUDE.md Abschnitt 5/7).
  */
 @Composable
-fun HomeScreen(onSignOut: () -> Unit, modifier: Modifier = Modifier) {
+fun LoginScreen(
+    isSigningIn: Boolean,
+    @StringRes errorMessageRes: Int?,
+    onSignInClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .testTag("home_screen"),
+            .testTag("login_screen"),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -46,30 +54,51 @@ fun HomeScreen(onSignOut: () -> Unit, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing)
         ) {
             Text(
-                text = stringResource(R.string.home_title),
+                text = stringResource(R.string.login_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("home_title")
+                modifier = Modifier.testTag("login_title")
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
             Text(
-                text = stringResource(R.string.home_subtitle),
+                text = stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.testTag("home_subtitle")
+                modifier = Modifier.testTag("login_subtitle")
             )
 
-            val signOutLabel = stringResource(R.string.home_sign_out)
-            OutlinedButton(
-                onClick = onSignOut,
+            if (errorMessageRes != null) {
+                Text(
+                    text = stringResource(errorMessageRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.testTag("login_error")
+                )
+            }
+
+            val signInLabel = stringResource(R.string.login_google_button)
+            Button(
+                onClick = onSignInClick,
+                enabled = !isSigningIn,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("home_logout_button")
-                    .semantics { contentDescription = signOutLabel }
+                    .testTag("login_google_button")
+                    .semantics { contentDescription = signInLabel }
             ) {
-                Text(text = signOutLabel)
+                if (isSigningIn) {
+                    CircularProgressIndicator(
+                        strokeWidth = Dimens.progressStroke,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier
+                            .size(Dimens.inlineProgressSize)
+                            .testTag("login_progress")
+                    )
+                } else {
+                    Text(text = signInLabel)
+                }
             }
         }
     }

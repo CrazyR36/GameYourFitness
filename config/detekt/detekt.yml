@@ -8,6 +8,10 @@ style:
   MagicNumber:
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
+  ReturnCount:
+    # Fruehe Rueckgaben als Guard Clauses am Funktionsanfang sind idiomatisch
+    # (Vorbedingungen pruefen und sofort abbrechen) — nicht mitzaehlen.
+    excludeGuardClauses: true
 
 complexity:
   LongMethod:

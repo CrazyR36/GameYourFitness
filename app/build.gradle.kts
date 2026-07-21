@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
@@ -25,13 +26,34 @@ android {
         testInstrumentationRunner = "com.gameyourfitness.app.HiltTestRunner"
     }
 
+    // Beispiel-Anon-Key aus backend/.env.example (oeffentlich, nur lokal/CI).
+    // Fuer den Server-Betrieb (Issue #13) via Gradle-Property ueberschreiben.
+    val anonKeyDefault = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+        "eyJpc3MiOiJzdXBhYmFzZS1sb2NhbCIsInJvbGUiOiJhbm9uIiwiZXhwIjoxOTgzODEyOTk2fQ." +
+        "03kRoHS7CyhlnnUN3ys_b4xqbK7gkdACm0R-gyCpoo8"
+    val supabaseAnonKey = (project.findProperty("SUPABASE_ANON_KEY") as String?) ?: anonKeyDefault
+    // Web-OAuth-Client-ID fuer GoTrue (siehe README). Leer lassen ist ok:
+    // E2E-Tests mocken die Google-Seite; nur der echte Login braucht den Wert.
+    val googleWebClientId = (project.findProperty("GOOGLE_WEB_CLIENT_ID") as String?) ?: ""
+
     buildTypes {
+        debug {
+            // Emulator erreicht den Host-Docker-Stack ueber 10.0.2.2.
+            val debugUrl = (project.findProperty("SUPABASE_URL") as String?) ?: "http://10.0.2.2:8000"
+            buildConfigField("String", "SUPABASE_URL", "\"$debugUrl\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val releaseUrl = (project.findProperty("SUPABASE_URL") as String?) ?: "https://example.invalid"
+            buildConfigField("String", "SUPABASE_URL", "\"$releaseUrl\"")
+            buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         }
     }
     compileOptions {
@@ -40,6 +62,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     testOptions {
         unitTests {
@@ -62,8 +85,19 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
+
+    // Auth: Google SSO (Credential Manager), Session-Persistenz, GoTrue-Client
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     // Unit-Tests: JUnit 5 als Plattform, Vintage-Engine fuehrt die JUnit-4-basierten
     // Robolectric-/Roborazzi-Tests im selben Lauf aus.

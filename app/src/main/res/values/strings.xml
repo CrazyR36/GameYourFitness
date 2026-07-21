@@ -2,4 +2,12 @@
     <string name="app_name">GameYourFitness</string>
     <string name="home_title">GAME YOUR FITNESS</string>
     <string name="home_subtitle">System bereit.</string>
+    <string name="home_sign_out">Abmelden</string>
+
+    <string name="login_title">GAME YOUR FITNESS</string>
+    <string name="login_subtitle">Melde dich an, um dein System zu betreten.</string>
+    <string name="login_google_button">Mit Google anmelden</string>
+    <string name="login_error_cancelled">Anmeldung abgebrochen. Bitte versuche es erneut.</string>
+    <string name="login_error_network">Keine Verbindung zum Server. Prüfe deine Internetverbindung.</string>
+    <string name="login_error_generic">Anmeldung fehlgeschlagen. Bitte versuche es erneut.</string>
 </resources>
