@@ -38,15 +38,17 @@ class DataStoreSessionStore @Inject constructor(private val dataStore: DataStore
         val prefs = dataStore.data.first()
         val accessToken = prefs[KEY_ACCESS_TOKEN]
         val refreshToken = prefs[KEY_REFRESH_TOKEN]
-        // Ohne Tokens gibt es keine nutzbare Session.
-        if (accessToken == null || refreshToken == null) return null
+        val userId = prefs[KEY_USER_ID]
+        // Ohne Tokens ODER user_id gibt es keine nutzbare Session: ein leerer
+        // userId wuerde sonst als SignedIn("") ins UI und in spaetere user_id-
+        // Abfragen fliessen. Fehlt nur das Ablaufdatum, genuegt Default 0L
+        // (= abgelaufen → Refresh).
+        if (accessToken == null || refreshToken == null || userId == null) return null
         return AuthSession(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            // expiresAt/userId werden immer gemeinsam mit den Tokens geschrieben;
-            // fehlen sie, ist der Store inkonsistent → Defaults statt Absturz.
             expiresAtEpochSeconds = prefs[KEY_EXPIRES_AT] ?: 0L,
-            userId = prefs[KEY_USER_ID].orEmpty(),
+            userId = userId,
             email = prefs[KEY_EMAIL]
         )
     }
