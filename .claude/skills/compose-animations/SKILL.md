@@ -1,37 +1,38 @@
 ---
 name: compose-animations
-description: "Use when writing or reviewing Jetpack Compose motion: visibility enter/exit, animating one property toward a target, color or size transitions, multiple properties from one state, switching composable content, or choosing between AnimatedVisibility, animate*AsState, rememberTransition, AnimatedContent, and Crossfade."
+description: "Nutze diesen Skill beim Schreiben oder Review von Bewegung in Jetpack Compose: Visibility-Enter/Exit, eine Property zu einem Ziel animieren, Farb- oder Größen-Transitions, mehrere Properties aus einem State, Composable-Content wechseln, oder die Wahl zwischen AnimatedVisibility, animate*AsState, rememberTransition, AnimatedContent und Crossfade."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose: animations
+# Compose: Animationen
 
-## Core principle
+## Grundprinzip
 
-Pick the **smallest API that matches the problem**: built-in visibility and layout transitions first, then a single animated value, then a shared transition object when several values must move together, then gesture-level or imperative APIs when the framework cannot express the motion.
+Wähle die **kleinste API, die zum Problem passt**: zuerst eingebaute Visibility- und Layout-Transitions, dann ein einzelner animierter Wert, dann ein geteiltes Transition-Objekt, wenn mehrere Werte zusammen bewegt werden müssen, dann Gesten-Level- oder imperative APIs, wenn das Framework die Bewegung nicht ausdrücken kann.
 
-## Review procedure
+## Review-Vorgehen
 
-1. Identify the visual job: show/hide, one value, coordinated values, content swap, size change, or gesture-driven motion.
-2. Choose the smallest API from the table below.
-3. Check lifecycle semantics: should hidden content leave composition, keep focus/state, or only become transparent?
-4. Check identity: for state-holder wrappers, choose `AnimatedContent.contentKey` by visual shape rather than payload churn.
-5. Check performance: keep frame-rate animation values as `State` and read them in layout/draw block modifiers when possible.
-6. Escalate to `Animatable` or lower-level APIs only when target-state animation cannot express the motion.
+1. Identifiziere die visuelle Aufgabe: Zeigen/Verstecken, ein Wert, koordinierte Werte, Content-Tausch, Größenänderung oder gestengetriebene Bewegung.
+2. Wähle die kleinste API aus der Tabelle unten.
+3. Prüfe die Lifecycle-Semantik: Soll versteckter Content die Composition verlassen, Fokus/State behalten oder nur transparent werden?
+4. Prüfe Identität: Für State-Holder-Wrapper wähle `AnimatedContent.contentKey` nach visueller Form statt nach Payload-Churn.
+5. Prüfe Performance: Halte frame-rate-Animationswerte als `State` und lies sie wo möglich in Layout-/Draw-Block-Modifiern.
+6. Eskaliere nur zu `Animatable` oder Low-Level-APIs, wenn Target-State-Animation die Bewegung nicht ausdrücken kann.
 
-## Pick the smallest animation API
+## Die kleinste Animations-API wählen
 
-| Need | API |
+| Bedarf | API |
 |---|---|
-| Show or hide a subtree with enter/exit semantics; content is removed after exit completes | [`AnimatedVisibility`](https://developer.android.com/develop/ui/compose/animation/composables-modifiers#animatedvisibility) |
-| Animate one property toward a target derived from state | [`animateFloatAsState`](https://developer.android.com/develop/ui/compose/animation/value-based#animate-as-state) / `animateDpAsState` / `animateColorAsState` / `animateOffsetAsState` / … |
-| Several animated values keyed off one boolean, enum, or sealed state | `rememberTransition` + transition child animations (`animateFloat`, `animateDp`, `animateColor`, `animateValue`, …) |
-| Smooth size when child layout height/width changes (e.g. text wraps) | `Modifier.animateContentSize()` |
-| Swap between different composable trees for the same slot | `AnimatedContent` or `Crossfade` |
-| User-driven motion (drag, fling, interruptible springs) | [`Animatable`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Animatable) and related coroutine APIs (see Advanced pointers) |
+| Einen Subtree zeigen/verstecken mit Enter-/Exit-Semantik; Content wird nach Abschluss des Exits entfernt | [`AnimatedVisibility`](https://developer.android.com/develop/ui/compose/animation/composables-modifiers#animatedvisibility) |
+| Eine Property zu einem aus State abgeleiteten Ziel animieren | [`animateFloatAsState`](https://developer.android.com/develop/ui/compose/animation/value-based#animate-as-state) / `animateDpAsState` / `animateColorAsState` / `animateOffsetAsState` / … |
+| Mehrere animierte Werte, gekeyt auf ein Boolean, Enum oder sealed State | `rememberTransition` + Transition-Child-Animationen (`animateFloat`, `animateDp`, `animateColor`, `animateValue`, …) |
+| Sanfte Größe, wenn sich Child-Layout-Höhe/-Breite ändert (z. B. Text bricht um) | `Modifier.animateContentSize()` |
+| Zwischen verschiedenen Composable-Bäumen für denselben Slot wechseln | `AnimatedContent` oder `Crossfade` |
+| Nutzergetriebene Bewegung (Drag, Fling, unterbrechbare Springs) | [`Animatable`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Animatable) und verwandte Coroutine-APIs (siehe Advanced-Verweise) |
 
-## Appear and disappear
+## Erscheinen und verschwinden
 
-**Prefer `AnimatedVisibility`** when the UI should leave or join the tree with enter/exit transitions.
+**Bevorzuge `AnimatedVisibility`**, wenn die UI den Baum mit Enter-/Exit-Transitions verlassen oder ihm beitreten soll.
 
 ```kotlin
 AnimatedVisibility(visible = expanded) {
@@ -39,13 +40,13 @@ AnimatedVisibility(visible = expanded) {
 }
 ```
 
-**`animateFloatAsState` on alpha** only fades; the composable **stays in composition** and continues to participate in layout unless you gate it yourself. Use that tradeoff when you intentionally keep children mounted (state, focus) but visually hidden. For true remove-from-tree behavior, use `AnimatedVisibility` (or conditional composition with `AnimatedVisibility` / `AnimatedContent` patterns from the [quick guide](https://developer.android.com/develop/ui/compose/animation/quick-guide)).
+**`animateFloatAsState` auf alpha** blendet nur; das Composable **bleibt in der Composition** und nimmt weiter am Layout teil, außer du gatest es selbst. Nutze diesen Tradeoff, wenn du Kinder bewusst gemountet hältst (State, Fokus), aber visuell versteckst. Für echtes Aus-dem-Baum-Entfernen nutze `AnimatedVisibility` (oder bedingte Composition mit `AnimatedVisibility`-/`AnimatedContent`-Mustern aus dem [Quick Guide](https://developer.android.com/develop/ui/compose/animation/quick-guide)).
 
-## Background color
+## Hintergrundfarbe
 
-Use `animateColorAsState` for smooth color targets.
+Nutze `animateColorAsState` für sanfte Farbziele.
 
-For animated fills behind children, the [quick guide](https://developer.android.com/develop/ui/compose/animation/quick-guide) recommends drawing with **`Modifier.drawBehind`** rather than `Modifier.background()` so the animated color is applied in the draw phase appropriately for performance.
+Für animierte Füllungen hinter Kindern empfiehlt der [Quick Guide](https://developer.android.com/develop/ui/compose/animation/quick-guide) das Zeichnen mit **`Modifier.drawBehind`** statt `Modifier.background()`, damit die animierte Farbe performance-gerecht in der Draw-Phase angewendet wird.
 
 ```kotlin
 val background = animateColorAsState(
@@ -57,17 +58,17 @@ Box(
 ) { /* content */ }
 ```
 
-## Size changes
+## Größenänderungen
 
-`Modifier.animateContentSize()` animates layout size changes—common for expanding/collapsing text or dynamic chips—without hand-rolling width/height animations.
+`Modifier.animateContentSize()` animiert Layout-Größenänderungen — üblich für expandierenden/kollabierenden Text oder dynamische Chips — ohne handgeschriebene Width-/Height-Animationen.
 
-## Value-based animations (`animate*AsState`)
+## Wert-basierte Animationen (`animate*AsState`)
 
-Compose provides `animate*AsState` for `Float`, `Dp`, `Color`, `Size`, `Offset`, `Rect`, `Int`, `IntOffset`, `IntSize`, and more. You supply the **target**; the API owns the animation state.
+Compose bietet `animate*AsState` für `Float`, `Dp`, `Color`, `Size`, `Offset`, `Rect`, `Int`, `IntOffset`, `IntSize` und mehr. Du lieferst das **Ziel**; die API besitzt den Animations-State.
 
-- Pass an [`AnimationSpec`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/AnimationSpec) via `animationSpec` (e.g. `spring`, `tween`) when defaults are wrong for the UI.
-- Set a distinct **`label`** for debugging and tooling when multiple animations exist in one composable.
-- For completion or sequencing details, see [Value-based animations](https://developer.android.com/develop/ui/compose/animation/value-based).
+- Übergib eine [`AnimationSpec`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/AnimationSpec) via `animationSpec` (z. B. `spring`, `tween`), wenn die Defaults für die UI falsch sind.
+- Setze ein eindeutiges **`label`** für Debugging und Tooling, wenn mehrere Animationen in einem Composable existieren.
+- Für Completion- oder Sequencing-Details siehe [Value-based animations](https://developer.android.com/develop/ui/compose/animation/value-based).
 
 ```kotlin
 val width by animateDpAsState(
@@ -77,9 +78,9 @@ val width by animateDpAsState(
 )
 ```
 
-## Multiple properties: `rememberTransition`
+## Mehrere Properties: `rememberTransition`
 
-When one piece of state (e.g. `enum class Phase { A, B, C }`) should drive **several** animated values in lockstep, use `rememberTransition` and define child animations on that transition:
+Wenn ein State (z. B. `enum class Phase { A, B, C }`) **mehrere** animierte Werte im Gleichschritt treiben soll, nutze `rememberTransition` und definiere Child-Animationen auf dieser Transition:
 
 ```kotlin
 val transition = rememberTransition(targetState = phase, label = "phase")
@@ -91,42 +92,42 @@ val offset by transition.animateDp(label = "offset") { target ->
 }
 ```
 
-Avoid multiple independent `animate*AsState` calls that should stay visually synchronized but can drift if specs or targets diverge. Older code may use `updateTransition`; prefer `rememberTransition` for new code.
+Vermeide mehrere unabhängige `animate*AsState`-Aufrufe, die visuell synchron bleiben sollen, aber driften können, wenn Specs oder Ziele auseinanderlaufen. Älterer Code nutzt evtl. `updateTransition`; bevorzuge `rememberTransition` für neuen Code.
 
-## Choosing between content-level APIs
+## Zwischen Content-Level-APIs wählen
 
-Use the official [Choose an animation API](https://developer.android.com/develop/ui/compose/animation/choose-api) tree when the table is not enough. Compressed rules:
+Nutze den offiziellen [Choose an animation API](https://developer.android.com/develop/ui/compose/animation/choose-api)-Baum, wenn die Tabelle nicht genügt. Komprimierte Regeln:
 
-| Situation | Prefer |
+| Situation | Bevorzuge |
 |---|---|
-| Same composable, different **target values** for layout properties | `animate*AsState` or `rememberTransition` |
-| Different **composable content** for the same region (tabs, steps) | `AnimatedContent` (custom `transitionSpec`, `contentKey`) or simpler `Crossfade` |
-| Pager-like **swipe between pages** | Horizontal pager APIs from the animation docs / Material—follow the choose-api guidance |
-| Transitions **owned by Navigation Compose** | Use navigation’s built-in transitions rather than bolting `AnimatedContent` on top of the same destination swap |
+| Gleiches Composable, andere **Zielwerte** für Layout-Properties | `animate*AsState` oder `rememberTransition` |
+| Anderer **Composable-Content** für denselben Bereich (Tabs, Steps) | `AnimatedContent` (eigenes `transitionSpec`, `contentKey`) oder einfacheres `Crossfade` |
+| Pager-artiges **Wischen zwischen Seiten** | Horizontale Pager-APIs aus den Animations-Docs / Material — folge der Choose-API-Guidance |
+| Transitions, die **Navigation Compose** besitzt | Navigations-eigene Transitions nutzen, statt `AnimatedContent` auf denselben Destination-Tausch zu setzen |
 
-**Art-based motion** (illustrations, Lottie, complex vector timelines) is outside this skill; use dedicated libraries.
+**Art-basierte Bewegung** (Illustrationen, Lottie, komplexe Vektor-Timelines) liegt außerhalb dieses Skills; nutze dedizierte Bibliotheken.
 
-## Decision flow (high level)
+## Entscheidungsfluss (grob)
 
 ```mermaid
 flowchart TD
-  start[Animation_need]
-  start --> showHide{Show_or_hide_subtree}
-  showHide -->|yes| av[AnimatedVisibility]
-  showHide -->|no| oneProp{Single_property_to_target}
-  oneProp -->|yes| asState["animate*AsState"]
-  oneProp -->|no| multiProp{Many_props_one_state}
-  multiProp -->|yes| rt[rememberTransition]
-  multiProp -->|no| swapTree{Different_composable_content}
-  swapTree -->|yes| ac[AnimatedContent_or_Crossfade]
-  swapTree -->|no| advanced[Animatable_or_lower_level]
+  start["Animationsbedarf"]
+  start --> showHide{"Subtree zeigen/verstecken?"}
+  showHide -->|ja| av[AnimatedVisibility]
+  showHide -->|nein| oneProp{"Eine Property zum Ziel?"}
+  oneProp -->|ja| asState["animate*AsState"]
+  oneProp -->|nein| multiProp{"Viele Props, ein State?"}
+  multiProp -->|ja| rt[rememberTransition]
+  multiProp -->|nein| swapTree{"Anderer Composable-Content?"}
+  swapTree -->|ja| ac[AnimatedContent_oder_Crossfade]
+  swapTree -->|nein| advanced["Animatable oder Low-Level"]
 ```
 
-## AnimatedContent keys for state holders
+## AnimatedContent-Keys für State-Holder
 
-When `AnimatedContent` receives a state-holder wrapper such as `AsyncResult<T>`, `Result<T>`, or a sealed `UiState`, decide what should actually trigger the transition. Usually the animation should run when the **content shape** changes (loading → content → error), not when the payload inside the same shape changes.
+Wenn `AnimatedContent` einen State-Holder-Wrapper wie `AsyncResult<T>`, `Result<T>` oder ein sealed `UiState` erhält, entscheide, was die Transition tatsächlich auslösen soll. Meist soll die Animation laufen, wenn sich die **Content-Form** ändert (loading → content → error), nicht wenn sich das Payload innerhalb derselben Form ändert.
 
-Use `contentKey` to map rich state to the animation identity:
+Nutze `contentKey`, um reichen State auf die Animations-Identität zu mappen:
 
 ```kotlin
 AnimatedContent(
@@ -148,46 +149,46 @@ AnimatedContent(
 }
 ```
 
-Without `contentKey`, every unequal `Success(value)` can be treated as new content. That is useful if a payload change should animate, but noisy when fresh data updates the same screen shape.
+Ohne `contentKey` kann jedes ungleiche `Success(value)` als neuer Content behandelt werden. Das ist nützlich, wenn eine Payload-Änderung animieren soll, aber laut, wenn frische Daten dieselbe Screen-Form aktualisieren.
 
-Choose keys by visual shape:
+Wähle Keys nach visueller Form:
 
-| State change | Typical `contentKey` |
+| State-Änderung | Typischer `contentKey` |
 |---|---|
-| Loading → Success → Error | Branch key: `"loading"`, `"content"`, `"error"` |
-| Success item A → Success item B should crossfade | Stable item id |
-| Success data refresh should update in place | Constant content key for `Success` |
-| Error message text changes but error UI shape stays | Constant content key for `Error` |
+| Loading → Success → Error | Branch-Key: `"loading"`, `"content"`, `"error"` |
+| Success Item A → Success Item B soll crossfaden | Stabile Item-Id |
+| Success-Daten-Refresh soll in-place aktualisieren | Konstanter Content-Key für `Success` |
+| Fehlermeldungstext ändert sich, aber die Fehler-UI-Form bleibt | Konstanter Content-Key für `Error` |
 
-## Animated values and composition performance
+## Animierte Werte und Composition-Performance
 
-`animate*AsState` returns `State` that updates frequently. If that value feeds `Modifier.offset`, `Modifier.graphicsLayer`, scroll-adjacent layout, or other **frame-rate** paths, avoid reading it in the composable body with `by` and then passing it into value-form modifiers—use **deferred reads** (block modifiers, draw/ layout lambdas) instead. See [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
+`animate*AsState` gibt `State` zurück, der sich häufig aktualisiert. Speist dieser Wert `Modifier.offset`, `Modifier.graphicsLayer`, scroll-nahes Layout oder andere **frame-rate**-Pfade, vermeide es, ihn im Composable-Body mit `by` zu lesen und dann in Wert-Form-Modifier zu übergeben — nutze stattdessen **Deferred Reads** (Block-Modifier, Draw-/Layout-Lambdas). Siehe [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
 
-If recomposition counters spike during motion unrelated to bad stability, see [`compose-recomposition-performance`](../compose-recomposition-performance/SKILL.md).
+Schnellt der Recomposition-Zähler während der Bewegung hoch, ohne Bezug zu schlechter Stabilität, siehe [`compose-recomposition-performance`](../compose-recomposition-performance/SKILL.md).
 
-## Escalation points
+## Eskalationspunkte
 
-Load the official docs when one of these applies:
+Lade die offiziellen Docs, wenn eines davon zutrifft:
 
-| Need | Start with |
+| Bedarf | Beginne mit |
 |---|---|
-| API tree is still ambiguous | [Choose an animation API](https://developer.android.com/develop/ui/compose/animation/choose-api) |
-| Gesture-driven, interruptible, or cancelable motion | [`Animatable`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Animatable), pointer input, decay |
-| Infinite or repeating cycles | [`rememberInfiniteTransition`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/rememberInfiniteTransition) |
-| Seekable or test-controlled progress | [`SeekableTransitionState`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/SeekableTransitionState) and related APIs |
+| API-Baum ist noch mehrdeutig | [Choose an animation API](https://developer.android.com/develop/ui/compose/animation/choose-api) |
+| Gestengetriebene, unterbrechbare oder abbrechbare Bewegung | [`Animatable`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/Animatable), Pointer Input, Decay |
+| Endlose oder wiederholende Zyklen | [`rememberInfiniteTransition`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/rememberInfiniteTransition) |
+| Seekbarer oder test-kontrollierter Fortschritt | [`SeekableTransitionState`](https://developer.android.com/reference/kotlin/androidx/compose/animation/core/SeekableTransitionState) und verwandte APIs |
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| Fade with `animateFloatAsState(alpha)` but expect children to unmount | Use `AnimatedVisibility` or remove the subtree from composition when hidden |
-| Three `animateDpAsState` calls that must stay in sync with one enum | One `rememberTransition` + child animations |
-| Animated color on `Modifier.background` causing extra work | Prefer `drawBehind { drawRect(animatedColor) }` per quick guide |
-| Chaining `LaunchedEffect` + manual `Animatable` for simple target animation | Prefer `animate*AsState` or `rememberTransition` unless gestures require `Animatable` |
-| Ignoring Navigation’s own transitions | Use Nav APIs for destination transitions; do not duplicate with `AnimatedContent` for the same swap |
-| `AnimatedContent(targetState = asyncResult)` animates on every data refresh | Add `contentKey` based on the visual shape or stable item identity |
+| Mit `animateFloatAsState(alpha)` faden, aber erwarten, dass Kinder unmounten | `AnimatedVisibility` nutzen oder den Subtree beim Verstecken aus der Composition entfernen |
+| Drei `animateDpAsState`-Aufrufe, die mit einem Enum synchron bleiben müssen | Ein `rememberTransition` + Child-Animationen |
+| Animierte Farbe auf `Modifier.background` verursacht Extra-Arbeit | `drawBehind { drawRect(animatedColor) }` gemäß Quick Guide bevorzugen |
+| `LaunchedEffect` + manuelles `Animatable` für einfache Target-Animation verketten | `animate*AsState` oder `rememberTransition` bevorzugen, außer Gesten erfordern `Animatable` |
+| Navigations-eigene Transitions ignorieren | Nav-APIs für Destination-Transitions nutzen; nicht mit `AnimatedContent` für denselben Tausch duplizieren |
+| `AnimatedContent(targetState = asyncResult)` animiert bei jedem Daten-Refresh | `contentKey` nach visueller Form oder stabiler Item-Identität hinzufügen |
 
-## When not to use this skill
+## Wann diesen Skill nicht nutzen
 
-- **Side-effect timing** (`LaunchedEffect`, clicks launching work): use [`compose-side-effects`](../compose-side-effects/SKILL.md).
-- **Deep performance tuning** of where snapshot state is read: use [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) as the primary reference.
+- **Side-Effect-Timing** (`LaunchedEffect`, Klicks, die Arbeit starten): nutze [`compose-side-effects`](../compose-side-effects/SKILL.md).
+- **Tiefes Performance-Tuning**, wo Snapshot-State gelesen wird: nutze [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) als primäre Referenz.

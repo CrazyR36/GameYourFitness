@@ -1,33 +1,34 @@
 ---
 name: compose-modifier-and-layout-style
-description: Use when writing or reviewing Jetpack Compose layout APIs, modifier parameters, modifier chain construction, hardcoded root layout decisions, or layout wrappers around a single conditional.
+description: "Nutze diesen Skill beim Schreiben oder Review von Jetpack-Compose-Layout-APIs, Modifier-Parametern, Modifier-Chain-Konstruktion, hartkodierten Root-Layout-Entscheidungen oder Layout-Wrappern um eine einzelne Bedingung."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose modifier and layout style
+# Compose: Modifier- und Layout-Stil
 
-## Core principle
+## Grundprinzip
 
-A composable that emits layout is a leaf the *parent* places — the parent decides position, size, alignment, padding. The composable's job is structure (what's inside), not placement (where it goes). Three rules follow:
+Ein Composable, das Layout emittiert, ist ein Leaf, das der *Parent* platziert — der Parent entscheidet Position, Größe, Alignment, Padding. Die Aufgabe des Composables ist Struktur (was drin ist), nicht Platzierung (wo es hingeht). Drei Regeln folgen:
 
-- **Declare a `modifier` parameter and apply it to the root**, so the parent can actually do its job. Hardcoding `.fillMaxWidth()` on a composable's root takes that decision away from every future caller.
-- **Construct modifier chains as one fluent expression**, not stepwise reassignments. Both compile to the same thing, but the chain *reads* as intent in one pass.
-- **Conditional rendering belongs where the condition applies.** A layout call whose only content is one `if` exists solely to hold the condition — push the `if` outside instead.
+- **Deklariere einen `modifier`-Parameter und wende ihn auf die Root an**, damit der Parent seine Aufgabe wirklich erledigen kann. `.fillMaxWidth()` auf der Root eines Composables hartzukodieren nimmt diese Entscheidung jedem künftigen Aufrufer weg.
+- **Baue Modifier-Chains als einen fluenten Ausdruck**, nicht als schrittweise Neuzuweisungen. Beides kompiliert zum selben, aber die Chain *liest* sich in einem Durchgang als Absicht.
+- **Bedingtes Rendering gehört dorthin, wo die Bedingung gilt.** Ein Layout-Aufruf, dessen einziger Content ein `if` ist, existiert nur, um die Bedingung zu halten — schiebe das `if` stattdessen nach außen.
 
-These travel together because the same composable usually triggers all three: you declare its parameters (rule 1), the caller constructs a chain to position it (rules 2), and the body has a conditional you might be tempted to wrap (rule 3).
+Diese reisen zusammen, weil dasselbe Composable meist alle drei auslöst: Du deklarierst seine Parameter (Regel 1), der Aufrufer baut eine Chain, um es zu positionieren (Regel 2), und der Body hat eine Bedingung, die du zu wrappen versucht sein könntest (Regel 3).
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-- You're writing a `@Composable fun` that calls a layout (`Box`, `Column`, `Row`, `LazyColumn`, `Text`, `Image`, `Surface`, `Card`, `Layout { … }`, anything from `compose.foundation.layout` or `compose.material*`) and its signature has no `modifier` parameter, or has one that isn't applied to the root, or has a hardcoded `.fillMaxWidth()`/`.padding(...)` on the root.
-- You see `var m = Modifier` followed by `m = m.padding(…)`, `m = m.background(…)`, etc.
-- A `modifier = …` argument has three or more chained calls on a single line.
-- A composable's body is `Layout { if (cond) Content() }` — one conditional, nothing else.
+- Du schreibst eine `@Composable fun`, die ein Layout aufruft (`Box`, `Column`, `Row`, `LazyColumn`, `Text`, `Image`, `Surface`, `Card`, `Layout { … }`, alles aus `compose.foundation.layout` oder `compose.material*`), und ihre Signatur hat keinen `modifier`-Parameter, oder einen, der nicht auf die Root angewendet wird, oder ein hartkodiertes `.fillMaxWidth()`/`.padding(...)` auf der Root.
+- Du siehst `var m = Modifier` gefolgt von `m = m.padding(…)`, `m = m.background(…)` usw.
+- Ein `modifier = …`-Argument hat drei oder mehr verkettete Aufrufe in einer Zeile.
+- Der Body eines Composables ist `Layout { if (cond) Content() }` — eine Bedingung, sonst nichts.
 
-## 1. Declare a `modifier` parameter
+## 1. Deklariere einen `modifier`-Parameter
 
-For composables that emit layout, prefer a `modifier` parameter after required parameters and before content/lambda parameters, with a default of `Modifier`. The name is exactly `modifier` — not `mod`, not `m`, not `wrapperModifier`.
+Für Composables, die Layout emittieren, bevorzuge einen `modifier`-Parameter nach den erforderlichen Parametern und vor Content-/Lambda-Parametern, mit Default `Modifier`. Der Name ist genau `modifier` — nicht `mod`, nicht `m`, nicht `wrapperModifier`.
 
 ```kotlin
-// ❌ BAD — no modifier param; caller can't position, size, or constrain this
+// ❌ SCHLECHT — kein modifier-Param; Aufrufer kann das nicht positionieren, dimensionieren oder constrainen
 @Composable
 fun HomeScreenHeader(title: String, subtitle: String) {
     Column(
@@ -43,7 +44,7 @@ fun HomeScreenHeader(title: String, subtitle: String) {
 ```
 
 ```kotlin
-// ✅ GOOD — parent decides width and padding; the composable describes structure only
+// ✅ GUT — Parent entscheidet Breite und Padding; das Composable beschreibt nur Struktur
 @Composable
 fun HomeScreenHeader(
     title: String,
@@ -60,20 +61,20 @@ fun HomeScreenHeader(
 }
 ```
 
-The caller now writes `HomeScreenHeader(title, subtitle, Modifier.fillMaxWidth().padding(horizontal = 16.dp))` once, at the home screen — the only place that knows the layout actually wants those.
+Der Aufrufer schreibt jetzt `HomeScreenHeader(title, subtitle, Modifier.fillMaxWidth().padding(horizontal = 16.dp))` einmal, am Home-Screen — der einzigen Stelle, die weiß, dass das Layout diese tatsächlich will.
 
-## 2. Apply the caller's modifier to the root, and apply it first
+## 2. Wende den Modifier des Aufrufers auf die Root an, und zwar zuerst
 
-When the root layout already takes other arguments (alignment, arrangement, padding *that's intrinsic to the composable*), the caller-provided modifier still goes on the root layout's `modifier` parameter — and the composable's local chain is appended after.
+Wenn das Root-Layout bereits andere Argumente nimmt (Alignment, Arrangement, Padding, *das dem Composable intrinsisch ist*), geht der vom Aufrufer gelieferte Modifier trotzdem auf den `modifier`-Parameter des Root-Layouts — und die lokale Chain des Composables wird danach angehängt.
 
 ```kotlin
-// ❌ BAD — modifier accepted but never applied
+// ❌ SCHLECHT — modifier akzeptiert, aber nie angewendet
 @Composable
 fun Avatar(url: String, modifier: Modifier = Modifier) {
     Image(painter = rememberAsyncImagePainter(url), contentDescription = null)
 }
 
-// ❌ BAD — applied to a child, not the root; caller's size/position changes don't take
+// ❌ SCHLECHT — auf ein Kind angewendet, nicht auf die Root; Größen-/Positionsänderungen des Aufrufers greifen nicht
 @Composable
 fun Avatar(url: String, modifier: Modifier = Modifier) {
     Box {
@@ -85,7 +86,7 @@ fun Avatar(url: String, modifier: Modifier = Modifier) {
     }
 }
 
-// ❌ BAD — caller's modifier ends up last, so the composable's own size wins
+// ❌ SCHLECHT — der Modifier des Aufrufers landet zuletzt, also gewinnt die eigene Größe des Composables
 @Composable
 fun Avatar(url: String, modifier: Modifier = Modifier) {
     Image(
@@ -100,7 +101,7 @@ fun Avatar(url: String, modifier: Modifier = Modifier) {
 ```
 
 ```kotlin
-// ✅ GOOD — caller's modifier first, then the composable's intrinsic chain
+// ✅ GUT — Modifier des Aufrufers zuerst, dann die intrinsische Chain des Composables
 @Composable
 fun Avatar(url: String, modifier: Modifier = Modifier) {
     Image(
@@ -113,37 +114,37 @@ fun Avatar(url: String, modifier: Modifier = Modifier) {
 }
 ```
 
-Order matters: in a modifier chain, the *earlier* segment is the outer wrapper. The caller's modifier should be the outermost so caller-provided `.size(...)` or `.padding(...)` can override the composable's defaults rather than being overridden by them.
+Reihenfolge zählt: In einer Modifier-Chain ist das *frühere* Segment der äußere Wrapper. Der Modifier des Aufrufers sollte der äußerste sein, damit ein vom Aufrufer geliefertes `.size(...)` oder `.padding(...)` die Defaults des Composables überschreiben kann, statt von ihnen überschrieben zu werden.
 
-## 3. Don't hardcode layout decisions on the root
+## 3. Layout-Entscheidungen nicht auf der Root hartkodieren
 
-If the composable's root has `.fillMaxWidth()`, `.padding(horizontal = 16.dp)`, `.height(56.dp)`, etc., the caller can't *not* have them. Those are layout choices the parent should own.
+Hat die Root des Composables `.fillMaxWidth()`, `.padding(horizontal = 16.dp)`, `.height(56.dp)` usw., kann der Aufrufer sie *nicht weglassen*. Das sind Layout-Entscheidungen, die der Parent besitzen sollte.
 
 ```kotlin
-// ❌ BAD — every caller now fills max width whether they want to or not
+// ❌ SCHLECHT — jeder Aufrufer füllt jetzt die maximale Breite, ob er will oder nicht
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),   // ← hardcoded
+        modifier = modifier.fillMaxWidth(),   // ← hartkodiert
     ) { Text(text) }
 }
 
-// ✅ GOOD — caller adds .fillMaxWidth() if (and only if) they want it
+// ✅ GUT — Aufrufer fügt .fillMaxWidth() hinzu, wenn (und nur wenn) er es will
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(onClick = onClick, modifier = modifier) { Text(text) }
 }
 ```
 
-The carve-out is for modifiers that are part of the **identity** of the composable — what makes an `Avatar` an avatar (the `.clip(CircleShape)` and a default `.size(48.dp)`), not where it sits on the screen. Test: can you imagine a caller wanting a version of this composable *without* that modifier? If yes, push it out. If no (an avatar without `clip(CircleShape)` isn't an avatar), keep it — but put it *after* the caller's modifier in the chain (see §2).
+Die Ausnahme sind Modifier, die Teil der **Identität** des Composables sind — was einen `Avatar` zum Avatar macht (das `.clip(CircleShape)` und eine Default-`.size(48.dp)`), nicht wo er auf dem Screen sitzt. Test: Kannst du dir einen Aufrufer vorstellen, der eine Version dieses Composables *ohne* diesen Modifier will? Wenn ja, schiebe ihn raus. Wenn nein (ein Avatar ohne `clip(CircleShape)` ist kein Avatar), behalte ihn — aber setze ihn *nach* dem Modifier des Aufrufers in die Chain (siehe §2).
 
-## 4. Construct modifier chains as one fluent expression
+## 4. Modifier-Chains als einen fluenten Ausdruck bauen
 
-Recomposition re-runs the composable body — every modifier expression is re-evaluated. Reassigning `var modifier =` step-by-step looks plausible but breaks the visual flow, invites further mutation, and produces nothing a chain doesn't.
+Recomposition führt den Composable-Body erneut aus — jeder Modifier-Ausdruck wird neu ausgewertet. `var modifier =` Schritt für Schritt neu zuzuweisen sieht plausibel aus, bricht aber den visuellen Fluss, lädt zu weiterer Mutation ein und produziert nichts, was eine Chain nicht auch tut.
 
 ```kotlin
-// ❌ BAD — visual flow broken into reassignments; `var` invites more mutation
+// ❌ SCHLECHT — visueller Fluss in Neuzuweisungen zerbrochen; `var` lädt zu mehr Mutation ein
 @Composable
 fun Demo() {
     var m = Modifier
@@ -152,7 +153,7 @@ fun Demo() {
     Box(m) { }
 }
 
-// ❌ ALSO BAD — same shape, dressed up with .then()
+// ❌ EBENFALLS SCHLECHT — gleiche Form, aufgehübscht mit .then()
 @Composable
 fun Demo() {
     var m = Modifier
@@ -163,7 +164,7 @@ fun Demo() {
 ```
 
 ```kotlin
-// ✅ GOOD
+// ✅ GUT
 @Composable
 fun Demo() {
     val m = Modifier
@@ -173,24 +174,24 @@ fun Demo() {
 }
 ```
 
-`val`, not `var`: once the chain is built, nothing should re-bind it. The reassignment shape is what makes `var` look necessary; the chain shape doesn't need it.
+`val`, nicht `var`: Ist die Chain gebaut, sollte nichts sie neu binden. Die Neuzuweisungs-Form ist es, die `var` nötig aussehen lässt; die Chain-Form braucht es nicht.
 
-### Inline at the call site is fine for short chains
+### Inline an der Aufrufstelle ist für kurze Chains in Ordnung
 
-For one or two calls, build the modifier inline. The "extract to a `val`" rule only earns its keep when the chain is long enough to be worth naming, or when the same chain repeats.
+Für ein oder zwei Aufrufe baue den Modifier inline. Die „in ein `val` extrahieren"-Regel lohnt sich erst, wenn die Chain lang genug ist, um einen Namen wert zu sein, oder wenn sich dieselbe Chain wiederholt.
 
 ```kotlin
-// ✅ GOOD — short chain inline
+// ✅ GUT — kurze Chain inline
 Box(modifier = Modifier.fillMaxWidth()) { … }
 Box(modifier = Modifier.padding(8.dp).background(Color.Red)) { … }
 ```
 
-### Conditional segments stay on the chain
+### Bedingte Segmente bleiben auf der Chain
 
-A common reason to reach for `var` is "the modifier depends on a condition." It doesn't — splice the condition inline:
+Ein häufiger Grund, zu `var` zu greifen, ist „der Modifier hängt von einer Bedingung ab". Tut er nicht — spleiße die Bedingung inline:
 
 ```kotlin
-// ✅ GOOD — conditional inside the chain, still one expression
+// ✅ GUT — Bedingung in der Chain, weiterhin ein Ausdruck
 Box(
     modifier = Modifier
         .fillMaxWidth()
@@ -198,19 +199,19 @@ Box(
 )
 ```
 
-`Modifier` (the empty modifier) is the identity element for `.then` — it lets you keep the chain shape when one branch contributes nothing.
+`Modifier` (der leere Modifier) ist das Identitätselement für `.then` — er lässt dich die Chain-Form behalten, wenn ein Branch nichts beiträgt.
 
-## 5. Multiline formatting at the call site
+## 5. Mehrzeilige Formatierung an der Aufrufstelle
 
-When a `modifier` argument's chain has **three or more** calls, format multiline with one call per line. Indent the chain so the dotted calls align beneath the value.
+Wenn die Chain eines `modifier`-Arguments **drei oder mehr** Aufrufe hat, formatiere mehrzeilig mit einem Aufruf pro Zeile. Rücke die Chain so ein, dass die gepunkteten Aufrufe unter dem Wert ausgerichtet sind.
 
 ```kotlin
-// ❌ BAD — three+ calls on one line; hard to scan
+// ❌ SCHLECHT — drei+ Aufrufe in einer Zeile; schwer zu scannen
 Box(
     modifier = modifier.fillMaxSize().padding(16.dp).weight(1f),
 )
 
-// ✅ GOOD
+// ✅ GUT
 Box(
     modifier = modifier
         .fillMaxSize()
@@ -219,16 +220,16 @@ Box(
 )
 ```
 
-One or two calls stay on a single line — the threshold is the call count, not the character count. If a single call has very long arguments, that's a different problem (extract a `val`, or shorten the arguments).
+Ein oder zwei Aufrufe bleiben in einer Zeile — die Schwelle ist die Anzahl der Aufrufe, nicht die Zeichenzahl. Hat ein einzelner Aufruf sehr lange Argumente, ist das ein anderes Problem (ein `val` extrahieren oder die Argumente kürzen).
 
-This applies *only* to a parameter named `modifier`. Other fluent-style arguments aren't covered here.
+Das gilt *nur* für einen Parameter namens `modifier`. Andere fluent-stilartige Argumente sind hier nicht abgedeckt.
 
-## 6. Hoist single conditionals out of the layout
+## 6. Einzelne Bedingungen aus dem Layout hochziehen
 
-When a layout's *only* content is one `if`, the layout exists solely to "hold" the conditional. Move the `if` outside — the layout will only exist when it has something to show.
+Wenn der *einzige* Content eines Layouts ein `if` ist, existiert das Layout nur, um die Bedingung zu „halten". Schiebe das `if` nach außen — das Layout existiert dann nur, wenn es etwas zu zeigen hat.
 
 ```kotlin
-// ❌ BAD — Column always emitted; only its inner content is conditional
+// ❌ SCHLECHT — Column immer emittiert; nur ihr innerer Content ist bedingt
 @Composable
 fun A() {
     Column {
@@ -239,7 +240,7 @@ fun A() {
     }
 }
 
-// ✅ GOOD — Column only exists when it has content
+// ✅ GUT — Column existiert nur, wenn sie Content hat
 @Composable
 fun A() {
     if (showHeader) {
@@ -251,14 +252,14 @@ fun A() {
 }
 ```
 
-The benefit isn't a performance win — the runtime handles both fine — it's that the second form *reads* as "header section, conditionally." The first reads as "always-on column that may or may not have content."
+Der Vorteil ist kein Performance-Gewinn — die Runtime kommt mit beidem klar — sondern dass die zweite Form sich als „Header-Section, bedingt" *liest*. Die erste liest sich als „immer-präsente Column, die Content haben kann oder nicht".
 
-### The carve-outs (and why)
+### Die Ausnahmen (und warum)
 
-- **Layout carries visual semantics that aren't conditional.** When the layout call passes `modifier`, `contentAlignment`, `horizontalArrangement`, or `verticalAlignment`, those arguments describe the *container*, not the content. Hoisting the conditional either loses those (the container collapses with the content) or duplicates them into both branches. Leave it.
+- **Das Layout trägt visuelle Semantik, die nicht bedingt ist.** Wenn der Layout-Aufruf `modifier`, `contentAlignment`, `horizontalArrangement` oder `verticalAlignment` übergibt, beschreiben diese Argumente den *Container*, nicht den Content. Die Bedingung hochzuziehen verliert diese entweder (der Container kollabiert mit dem Content) oder dupliziert sie in beide Branches. Belasse es.
 
   ```kotlin
-  // ✅ KEEP AS-IS — modifier on the container is doing visible work
+  // ✅ SO LASSEN — modifier auf dem Container leistet sichtbare Arbeit
   @Composable
   fun A(modifier: Modifier = Modifier) {
       Box(modifier = modifier) {
@@ -270,22 +271,22 @@ The benefit isn't a performance win — the runtime handles both fine — it's t
   }
   ```
 
-- **There are siblings to the `if`.** The layout has other content; the `if` is just one piece. Hoisting either pulls the siblings out (changing the layout) or leaves a different shape behind. Leave it.
+- **Es gibt Geschwister zum `if`.** Das Layout hat anderen Content; das `if` ist nur ein Teil. Hochziehen zieht entweder die Geschwister raus (ändert das Layout) oder lässt eine andere Form zurück. Belasse es.
 
-- **`if … else …` with both branches contributing composables.** Both branches do work; nothing to hoist; the layout *is* the shared container.
+- **`if … else …` mit beiden Branches, die Composables beitragen.** Beide Branches leisten Arbeit; nichts zum Hochziehen; das Layout *ist* der geteilte Container.
 
   ```kotlin
-  // ✅ KEEP AS-IS — both branches contribute to the layout
+  // ✅ SO LASSEN — beide Branches tragen zum Layout bei
   Box {
       if (something) Text("Hint") else innerTextField()
   }
   ```
 
-## 7. Measure-phase constraint decoration
+## 7. Measure-Phase-Constraint-Dekoration
 
-When composable A captures a size and composable B must match it, **do not read the captured size in B's composable body** (`Modifier.height(state.dp)`). That ties B to composition whenever the measurement state changes.
+Wenn Composable A eine Größe erfasst und Composable B sie matchen muss, **lies die erfasste Größe nicht in Bs Composable-Body** (`Modifier.height(state.dp)`). Das bindet B an die Composition, wann immer sich der Measurement-State ändert.
 
-Capture in a layout callback on A; apply on B inside `Modifier.layout` so only layout invalidates:
+Erfasse in einem Layout-Callback auf A; wende auf B in `Modifier.layout` an, damit nur das Layout invalidiert:
 
 ```kotlin
 fun Modifier.decorateMeasureConstraints(
@@ -300,17 +301,17 @@ fun Modifier.decorateMeasureConstraints(
 ```
 
 ```kotlin
-// Hoisted at the common parent of both rows:
+// Hochgezogen am gemeinsamen Parent beider Zeilen:
 //   var anchorHeightPx by remember { mutableIntStateOf(0) }
 
-// Measured row — write state only from onSizeChanged
+// Gemessene Zeile — State nur aus onSizeChanged schreiben
 RowAnchor(Modifier.onSizeChanged { size -> if (size.height != anchorHeightPx) anchorHeightPx = size.height })
 
-// Sibling rows — read anchorHeightPx only inside layout
+// Geschwister-Zeilen — anchorHeightPx nur in layout lesen
 RowSibling(
     Modifier.decorateMeasureConstraints { incoming ->
         if (anchorHeightPx > 0) {
-            // Clamp to incoming bounds so the constraint never exceeds the parent's max.
+            // Auf die eingehenden Grenzen clampen, damit der Constraint nie das Max des Parents überschreitet.
             incoming.copy(minHeight = anchorHeightPx, maxHeight = anchorHeightPx)
         } else {
             incoming
@@ -319,57 +320,57 @@ RowSibling(
 )
 ```
 
-Use a composition-time fallback (fixed height) only while `anchorHeightPx` is `0`. See [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) for the full cross-row pattern.
+Nutze einen Composition-Zeit-Fallback (feste Höhe) nur, solange `anchorHeightPx` `0` ist. Siehe [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) für das vollständige phasenübergreifende Muster.
 
-## Quick reference
+## Kurzreferenz
 
-| Symptom | Diagnosis | Fix |
+| Symptom | Diagnose | Fix |
 |---|---|---|
-| `@Composable fun Foo(text: String)` with `Column`/`Box`/`Text` in body | No `modifier` param (§1) | Add `modifier: Modifier = Modifier`; pass to root |
-| `modifier: Modifier = Modifier` declared but never referenced | Param ignored (§2) | Apply to root layout's `modifier` arg |
-| `modifier` passed to a child, not the root | Wrong target (§2) | Move to the outermost layout's `modifier` |
-| `modifier = Modifier.x().y().then(modifier)` | Caller's modifier last (§2) | Reorder: `modifier = modifier.x().y()` |
-| `modifier = modifier.fillMaxWidth().padding(...)` on a general-purpose component | Layout hardcoded (§3) | Remove the hardcoded calls; let callers add them |
-| Sibling composables in the file don't have `modifier` either | Spreading anti-pattern | Fix this one; fix siblings opportunistically |
-| `mod: Modifier = Modifier` or `wrapperModifier: Modifier = Modifier` | Wrong name (§1) | Rename to exactly `modifier` |
-| `var m = Modifier` followed by `m = m.xxx()` reassignments | Stepwise modifier construction (§4) | One fluent chain on a `val`, or build inline |
-| `var m = Modifier; m = m.then(Modifier.xxx())` | Same shape via `.then` (§4) | Collapse `.then(Modifier.x())` to `.x()` in the chain |
-| Modifier branch needs a condition | Reaching for `var` (§4) | `.then(if (c) Modifier.x() else Modifier)` inside the chain |
-| `modifier = modifier.a().b().c()` on one line | Long chain not formatted (§5) | One call per line, indented under the value |
-| `Layout { if (cond) X() }` with no other content and no layout-tuning args | Hoist (§6) | Move the `if` outside the layout |
-| `Box(modifier = …) { if (cond) X() }` | Layout carries semantics — leave (§6 carve-out) | Keep as-is |
-| `Box { if (cond) X() else Y() }` | Both branches contribute — leave (§6 carve-out) | Keep as-is |
-| Sibling lazy row reads `height(state)` from another row's measurement | Composition-time size coupling (§7) | Capture on measured row; apply via `decorateMeasureConstraints` on siblings |
+| `@Composable fun Foo(text: String)` mit `Column`/`Box`/`Text` im Body | Kein `modifier`-Param (§1) | `modifier: Modifier = Modifier` hinzufügen; an die Root reichen |
+| `modifier: Modifier = Modifier` deklariert, aber nie referenziert | Param ignoriert (§2) | Auf den `modifier`-Arg des Root-Layouts anwenden |
+| `modifier` an ein Kind gereicht, nicht an die Root | Falsches Ziel (§2) | Auf den `modifier` des äußersten Layouts verschieben |
+| `modifier = Modifier.x().y().then(modifier)` | Modifier des Aufrufers zuletzt (§2) | Umsortieren: `modifier = modifier.x().y()` |
+| `modifier = modifier.fillMaxWidth().padding(...)` an einer Allzweck-Komponente | Layout hartkodiert (§3) | Die hartkodierten Aufrufe entfernen; Aufrufer sollen sie hinzufügen |
+| Geschwister-Composables in der Datei haben auch kein `modifier` | Verbreitungs-Anti-Pattern | Dieses fixen; Geschwister opportunistisch fixen |
+| `mod: Modifier = Modifier` oder `wrapperModifier: Modifier = Modifier` | Falscher Name (§1) | Auf genau `modifier` umbenennen |
+| `var m = Modifier` gefolgt von `m = m.xxx()`-Neuzuweisungen | Schrittweise Modifier-Konstruktion (§4) | Eine fluente Chain auf einem `val`, oder inline bauen |
+| `var m = Modifier; m = m.then(Modifier.xxx())` | Gleiche Form via `.then` (§4) | `.then(Modifier.x())` in der Chain zu `.x()` zusammenfassen |
+| Modifier-Branch braucht eine Bedingung | Griff zu `var` (§4) | `.then(if (c) Modifier.x() else Modifier)` in der Chain |
+| `modifier = modifier.a().b().c()` in einer Zeile | Lange Chain nicht formatiert (§5) | Ein Aufruf pro Zeile, unter dem Wert eingerückt |
+| `Layout { if (cond) X() }` ohne anderen Content und ohne Layout-Tuning-Args | Hochziehen (§6) | Das `if` aus dem Layout schieben |
+| `Box(modifier = …) { if (cond) X() }` | Layout trägt Semantik — belassen (§6-Ausnahme) | So lassen |
+| `Box { if (cond) X() else Y() }` | Beide Branches tragen bei — belassen (§6-Ausnahme) | So lassen |
+| Geschwister-Lazy-Zeile liest `height(state)` aus der Messung einer anderen Zeile | Composition-Zeit-Größenkopplung (§7) | Auf gemessener Zeile erfassen; via `decorateMeasureConstraints` auf Geschwister anwenden |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- **Composables that don't emit layout.** A `@Composable fun computeColor(): Color` or a `@Composable @ReadOnlyComposable` accessor doesn't emit a layout node. No `modifier` parameter needed (and a `@ReadOnlyComposable` couldn't accept one — see `compose-state-authoring`).
-- **`@Preview` functions.** Previews are throwaway entry points; the framework calls them with no caller. A `modifier` parameter would be unused dead weight.
-- **Test-only composables** inside `*Test` sources whose only caller is `composeTestRule.setContent { … }`. Same reasoning as previews.
-- **Internal layout primitives that take a `modifier` as their *first required* parameter** (very rare; framework-level). The rule is "first *optional* param"; some private utilities legitimately have `modifier` upfront as required.
-- **Modifier assembled imperatively from animation state.** A modifier built by appending values from `Animatable` or other procedural sources may legitimately need intermediate variables. The chain isn't the goal; readability is. If the chain becomes a worse expression, write the imperative form.
-- **Slot APIs that store modifiers** in a data class or builder (rare; usually framework-level code). The fluent-chain idea is about user-site construction.
-- **Test composables** pinning specific recomposition shapes — usually fine either way; don't refactor test composables purely for style.
+- **Composables, die kein Layout emittieren.** Ein `@Composable fun computeColor(): Color` oder ein `@Composable @ReadOnlyComposable`-Accessor emittiert keinen Layout-Knoten. Kein `modifier`-Parameter nötig (und ein `@ReadOnlyComposable` könnte keinen akzeptieren — siehe `compose-state-authoring`).
+- **`@Preview`-Funktionen.** Previews sind Wegwerf-Einstiegspunkte; das Framework ruft sie ohne Aufrufer auf. Ein `modifier`-Parameter wäre ungenutzter Ballast.
+- **Test-only-Composables** in `*Test`-Quellen, deren einziger Aufrufer `composeTestRule.setContent { … }` ist. Gleiche Begründung wie bei Previews.
+- **Interne Layout-Primitive, die einen `modifier` als ihren *ersten erforderlichen* Parameter nehmen** (sehr selten; Framework-Ebene). Die Regel ist „erster *optionaler* Param"; einige private Utilities haben `modifier` legitim vorne als erforderlich.
+- **Modifier, der imperativ aus Animations-State zusammengesetzt wird.** Ein Modifier, der durch Anhängen von Werten aus `Animatable` oder anderen prozeduralen Quellen gebaut wird, kann legitim Zwischenvariablen brauchen. Die Chain ist nicht das Ziel; Lesbarkeit ist es. Wird die Chain zum schlechteren Ausdruck, schreibe die imperative Form.
+- **Slot-APIs, die Modifier speichern** in einer data class oder einem Builder (selten; meist Framework-Ebene-Code). Die Fluent-Chain-Idee betrifft die Konstruktion an der Nutzer-Stelle.
+- **Test-Composables**, die bestimmte Recomposition-Formen fixieren — meist so oder so in Ordnung; refactore Test-Composables nicht rein aus Stilgründen.
 
-The declaration-side rules (§1–§3) should not be skipped merely because "this composable is internal", "only used in one place", "I'd rather not have the extra parameter on the signature", or "we know all the callers already". Those are exactly the rationalisations that produce composables that become single-use the day someone wants to call them twice.
+Die deklarationsseitigen Regeln (§1–§3) sollten nicht übersprungen werden, nur weil „dieses Composable ist intern", „nur an einer Stelle genutzt", „ich hätte lieber nicht den extra Parameter in der Signatur" oder „wir kennen alle Aufrufer schon". Genau das sind die Rechtfertigungen, die Composables produzieren, die an dem Tag zum Einzelfall werden, an dem jemand sie zweimal aufrufen will.
 
-## Red flags during review
+## Warnzeichen im Review
 
-| Thought | Reality |
+| Gedanke | Realität |
 |---|---|
-| "This composable is internal-only — adding `modifier` is over-engineering" | The parameter is eight characters and a default. It's not over-engineering; it's the convention. Skipping it is the over-engineering — it's a custom decision against the grain of every Compose API. |
-| "It's only used in one place, so I know the layout requirements" | "Only used in one place" describes today. The cost of the parameter is paid once; the cost of refactoring callers when the second use site appears is paid per caller. |
-| "The sibling composables in this file don't have `modifier` either, so I'm matching style" | Spreading an anti-pattern isn't matching style. Fix this one. Fix the siblings opportunistically. |
-| "The parent always wants `.fillMaxWidth()` here" | Then the parent passes `.fillMaxWidth()`. The composable doesn't decide that for callers it hasn't met yet. |
-| "I'll add it when someone needs it" | You're someone. You need it now (for the convention). The next caller won't add it either — they'll work around its absence. |
-| "It's a tiny composable — the modifier param is noise" | The param is eight characters at the declaration and zero characters at any call site that doesn't need it. The "noise" is imagined. |
-| "I added `modifier` but kept `.fillMaxWidth()` on the root so the home screen doesn't have to" | Then the *not*-home-screen caller can't unset it. Move the `.fillMaxWidth()` to the caller. |
-| "I need `var` for the modifier because the chain depends on a condition" | A conditional segment is `.then(if (c) Modifier.x() else Modifier)`, still on one chain. No `var` needed. |
-| "Three lines is too few to make multiline" | Three chained calls *is* the threshold. Below three, one line. At or above three, multiline. |
-| "The Column adds nothing but I'll keep it for symmetry" | Then hoist the conditional and keep the Column inside the consequent — symmetry preserved, no always-on container. |
-| "I'll put the `if` inside because the layout already exists" | "Already exists" is the bug. The layout shouldn't exist when the condition is false. |
+| „Dieses Composable ist nur intern — `modifier` hinzuzufügen ist Over-Engineering" | Der Parameter ist acht Zeichen und ein Default. Es ist kein Over-Engineering; es ist die Konvention. Es wegzulassen ist das Over-Engineering — eine Eigenentscheidung gegen den Strich jeder Compose-API. |
+| „Es wird nur an einer Stelle genutzt, also kenne ich die Layout-Anforderungen" | „Nur an einer Stelle" beschreibt heute. Die Kosten des Parameters zahlst du einmal; die Kosten, Aufrufer zu refactoren, wenn die zweite Nutzung auftaucht, zahlst du pro Aufrufer. |
+| „Die Geschwister-Composables in dieser Datei haben auch kein `modifier`, ich passe mich dem Stil an" | Ein Anti-Pattern zu verbreiten ist keine Stilanpassung. Fixe dieses. Fixe die Geschwister opportunistisch. |
+| „Der Parent will hier immer `.fillMaxWidth()`" | Dann übergibt der Parent `.fillMaxWidth()`. Das Composable entscheidet das nicht für Aufrufer, die es noch nicht getroffen hat. |
+| „Ich füge es hinzu, wenn jemand es braucht" | Du bist jemand. Du brauchst es jetzt (für die Konvention). Der nächste Aufrufer fügt es auch nicht hinzu — er umgeht seine Abwesenheit. |
+| „Es ist ein winziges Composable — der Modifier-Param ist Rauschen" | Der Param ist acht Zeichen an der Deklaration und null Zeichen an jeder Aufrufstelle, die ihn nicht braucht. Das „Rauschen" ist eingebildet. |
+| „Ich habe `modifier` hinzugefügt, aber `.fillMaxWidth()` auf der Root behalten, damit der Home-Screen es nicht muss" | Dann kann der *Nicht*-Home-Screen-Aufrufer es nicht abschalten. Verschiebe das `.fillMaxWidth()` zum Aufrufer. |
+| „Ich brauche `var` für den Modifier, weil die Chain von einer Bedingung abhängt" | Ein bedingtes Segment ist `.then(if (c) Modifier.x() else Modifier)`, weiterhin auf einer Chain. Kein `var` nötig. |
+| „Drei Zeilen sind zu wenig für mehrzeilig" | Drei verkettete Aufrufe *sind* die Schwelle. Unter drei: eine Zeile. Ab drei: mehrzeilig. |
+| „Die Column trägt nichts bei, aber ich behalte sie für Symmetrie" | Dann ziehe die Bedingung hoch und behalte die Column im Konsequenz-Branch — Symmetrie erhalten, kein immer-präsenter Container. |
+| „Ich setze das `if` hinein, weil das Layout schon existiert" | „Schon vorhanden" ist der Bug. Das Layout sollte nicht existieren, wenn die Bedingung falsch ist. |
 
-## Related
+## Verwandt
 
-- [`compose-slot-api-pattern`](../compose-slot-api-pattern/SKILL.md) — the other half of declaring a reusable composable's public API: take `@Composable () -> Unit` slots for variable content. A reusable component takes both a `modifier` parameter *and* slots — caller owns placement *and* what to place.
-- [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) — back-writing across phases and deferred measurement reads.
+- [`compose-slot-api-pattern`](../compose-slot-api-pattern/SKILL.md) — die andere Hälfte des Deklarierens der öffentlichen API eines wiederverwendbaren Composables: `@Composable () -> Unit`-Slots für variablen Content nehmen. Eine wiederverwendbare Komponente nimmt beides — einen `modifier`-Parameter *und* Slots — der Aufrufer besitzt Platzierung *und* Inhalt.
+- [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) — Back-Writing über Phasen und verzögerte Measurement-Reads.

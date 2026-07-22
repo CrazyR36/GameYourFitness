@@ -1,41 +1,42 @@
 ---
 name: kotlin-coroutines-structured-concurrency
-description: Use when writing or reviewing Kotlin code that stores CoroutineScope, launches from init/non-suspending APIs, calls runBlocking, or catches broad exceptions around suspend calls.
+description: "Nutze diesen Skill beim Schreiben oder Review von Kotlin-Code, der einen CoroutineScope speichert, aus init/nicht-suspendierenden APIs launcht, runBlocking aufruft oder breite Exceptions um suspend-Aufrufe fängt."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Kotlin coroutines: structured concurrency
+# Kotlin Coroutines: Structured Concurrency
 
-## Core principle
+## Grundprinzip
 
-A well-structured coroutine is a self-contained unit of asynchronous work — single entry, single exit, scoped to a lifecycle known at the call site.
+Eine gut strukturierte Coroutine ist eine in sich geschlossene Einheit asynchroner Arbeit — ein Eingang, ein Ausgang, an einen Lifecycle gebunden, der an der Aufrufstelle bekannt ist.
 
-**Scopes should usually be tied to the caller's lifecycle, not stored as a property on the callee.** A stored `CoroutineScope` is a strong review signal: the class must prove it owns cancellation, error reporting, restart behavior, and lifecycle. Most repositories, managers, use cases, and data sources cannot prove that, so they should expose `suspend` APIs instead.
+**Scopes sollten meist an den Lifecycle des Aufrufers gebunden sein, nicht als Property auf dem Aufgerufenen gespeichert.** Ein gespeicherter `CoroutineScope` ist ein starkes Review-Signal: Die Klasse muss beweisen, dass sie Cancellation, Fehlerreporting, Restart-Verhalten und Lifecycle besitzt. Die meisten Repositories, Manager, Use Cases und Datenquellen können das nicht beweisen, also sollten sie stattdessen `suspend`-APIs exponieren.
 
-The fix is almost always the same: **make the API `suspend` and let the caller own the scope.**
+Der Fix ist fast immer derselbe: **Mache die API `suspend` und lass den Aufrufer den Scope besitzen.**
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-You're writing or reviewing Kotlin code and you see any of these:
+Du schreibst oder reviewst Kotlin-Code und siehst eines davon:
 
-- A class with `private val scope: CoroutineScope` (constructor param stored as a property)
-- An `init { scope.launch { ... } }` block
-- A non-suspending public function whose body is `scope.launch { ... }`
-- `runBlocking { ... }` in suspend-capable application code, or in tests where `runTest` should apply
-- `runCatching { suspendCall() }` or a `catch` on `Exception` / `Throwable` around a `suspend` call without rethrowing `CancellationException`
-- A `catch (e: CancellationException)` (or equivalent) around suspension that does not rethrow
+- Eine Klasse mit `private val scope: CoroutineScope` (Konstruktor-Param als Property gespeichert)
+- Einen `init { scope.launch { ... } }`-Block
+- Eine nicht-suspendierende öffentliche Funktion, deren Body `scope.launch { ... }` ist
+- `runBlocking { ... }` in suspend-fähigem Anwendungscode oder in Tests, wo `runTest` gelten sollte
+- `runCatching { suspendCall() }` oder ein `catch` auf `Exception` / `Throwable` um einen `suspend`-Aufruf ohne Rethrow von `CancellationException`
+- Ein `catch (e: CancellationException)` (oder Äquivalent) um Suspension, das nicht rethrowt
 
-## The silent-cancellation bug
+## Der Silent-Cancellation-Bug
 
-The reason an unowned `CoroutineScope` property is so dangerous: **once a scope is cancelled, every future `launch` on it silently completes as cancelled — no exception, no log, nothing.** The work just doesn't happen. This is one of the hardest coroutine bugs to diagnose, and it appears when a class holds a long-lived reference to a lifecycle it does not own.
+Der Grund, warum eine nicht-besessene `CoroutineScope`-Property so gefährlich ist: **Sobald ein Scope gecancelt ist, schließt jedes künftige `launch` darauf still als gecancelt ab — keine Exception, kein Log, nichts.** Die Arbeit passiert einfach nicht. Das ist einer der am schwersten zu diagnostizierenden Coroutine-Bugs, und er tritt auf, wenn eine Klasse eine langlebige Referenz auf einen Lifecycle hält, den sie nicht besitzt.
 
-If APIs are `suspend`, this can't happen: the caller's scope is either alive (work runs) or the call site cancels (the caller knows).
+Sind APIs `suspend`, kann das nicht passieren: Der Scope des Aufrufers ist entweder lebendig (Arbeit läuft) oder die Aufrufstelle cancelt (der Aufrufer weiß es).
 
-## Anti-patterns and fixes
+## Anti-Patterns und Fixes
 
-### 1. CoroutineScope stored as a property
+### 1. CoroutineScope als Property gespeichert
 
 ```kotlin
-// ❌ BAD
+// ❌ SCHLECHT
 @Inject
 class UserRepository(
     private val scope: CoroutineScope,
@@ -46,7 +47,7 @@ class UserRepository(
     }
 }
 
-// ✅ GOOD
+// ✅ GUT
 @Inject
 class UserRepository(
     private val api: UserApi,
@@ -55,21 +56,21 @@ class UserRepository(
 }
 ```
 
-The repository no longer needs to know about coroutines at all. The caller (a ViewModel, a use case) decides on what scope, with what error handling, with what cancellation semantics.
+Das Repository muss überhaupt nichts mehr über Coroutines wissen. Der Aufrufer (ein ViewModel, ein Use Case) entscheidet über welchen Scope, mit welcher Fehlerbehandlung, mit welcher Cancellation-Semantik.
 
-### 2. init-block launches
+### 2. init-Block-Launches
 
 ```kotlin
-// ❌ BAD: construction-time side effect, unbounded work
+// ❌ SCHLECHT: Side Effect zur Konstruktionszeit, unbegrenzte Arbeit
 class UserSession(private val scope: CoroutineScope, private val api: Api) {
     init { scope.launch { _user.value = api.load() } }
 }
 ```
 
-The constructor returns immediately. The caller can't `await` the load, can't see errors, can't cancel. The class is "alive" but its state is undefined.
+Der Konstruktor kehrt sofort zurück. Der Aufrufer kann das Laden nicht `await`en, keine Fehler sehen, nicht canceln. Die Klasse ist „lebendig", aber ihr State ist undefiniert.
 
 ```kotlin
-// ✅ GOOD: explicit bootstrap, caller owns the suspension
+// ✅ GUT: expliziter Bootstrap, Aufrufer besitzt die Suspension
 class UserSession(private val api: Api) {
     private var _user: User? = null
     val user: User get() = checkNotNull(_user) { "Call init() first" }
@@ -78,36 +79,36 @@ class UserSession(private val api: Api) {
 }
 ```
 
-### 3. Fire-and-forget from non-UI classes
+### 3. Fire-and-forget aus Nicht-UI-Klassen
 
-A non-suspending public function on a **non-UI class** (repository, manager, use case, data source) that launches into a class-owned scope. The caller gets no result, no error, no cancellation, and no guarantee the work ever ran.
+Eine nicht-suspendierende öffentliche Funktion auf einer **Nicht-UI-Klasse** (Repository, Manager, Use Case, Datenquelle), die in einen klassen-eigenen Scope launcht. Der Aufrufer bekommt kein Ergebnis, keinen Fehler, keine Cancellation und keine Garantie, dass die Arbeit je lief.
 
 ```kotlin
-// ❌ BAD — repository with stored scope and fire-and-forget public API
+// ❌ SCHLECHT — Repository mit gespeichertem Scope und Fire-and-forget-öffentlicher API
 class AnalyticsClient(private val scope: CoroutineScope, private val api: Api) {
     fun track(event: Event) {
-        scope.launch { api.send(event) }      // caller has no idea what happens
+        scope.launch { api.send(event) }      // Aufrufer hat keine Ahnung, was passiert
     }
     fun signOut() {
-        scope.launch { api.signOut() }        // silent failure if scope cancelled
+        scope.launch { api.signOut() }        // stiller Fehlschlag, wenn Scope gecancelt
     }
 }
 ```
 
 ```kotlin
-// ✅ GOOD
+// ✅ GUT
 class AnalyticsClient(private val api: Api) {
     suspend fun track(event: Event) = api.send(event)
     suspend fun signOut() = api.signOut()
 }
 ```
 
-#### Carve-out: the UI ↔ state-holder boundary
+#### Ausnahme: die UI-↔-State-Holder-Grenze
 
-UI frameworks are non-suspending. A Composable's `onClick`, a Fragment's `onKeyEvent`, an Activity's `onNewIntent` — none can `suspend`. The state holder (ViewModel, Decompose Component, feature model, etc. — anything whose role is to absorb UI events and hold UI state) **is** the boundary that translates one-shot UI events into asynchronous work bound to the UI lifecycle. That's its job.
+UI-Frameworks sind nicht-suspendierend. Der `onClick` eines Composables, das `onKeyEvent` eines Fragments, das `onNewIntent` einer Activity — keines kann `suspend`en. Der State-Holder (ViewModel, Decompose-Component, Feature-Model usw. — alles, dessen Rolle es ist, UI-Events aufzunehmen und UI-State zu halten) **ist** die Grenze, die einmalige UI-Events in asynchrone, an den UI-Lifecycle gebundene Arbeit übersetzt. Das ist seine Aufgabe.
 
 ```kotlin
-// ✅ GOOD — state holder absorbs a non-suspending UI event onto its scope
+// ✅ GUT — State-Holder nimmt ein nicht-suspendierendes UI-Event auf seinen Scope
 class FavouritesViewModel(private val repo: FavouritesRepository) : ViewModel() {
     fun onToggleFavourite(item: Item) {
         viewModelScope.launch { repo.toggleFavourite(item) }
@@ -118,45 +119,45 @@ class FavouritesViewModel(private val repo: FavouritesRepository) : ViewModel() 
 ListItem(onClick = { viewModel.onToggleFavourite(item) })
 ```
 
-This is **not** the fire-and-forget anti-pattern. All three conditions must hold:
+Das ist **nicht** das Fire-and-forget-Anti-Pattern. Alle drei Bedingungen müssen gelten:
 
-1. **State holder for a UI surface** — a ViewModel, Decompose Component, feature model, or equivalent UI state holder. Not a repository, manager, use case, or data source.
-2. **Lifecycle-bound scope** — `viewModelScope`, a Component's `coroutineScope` that's cancelled on destroy, a Composable's `rememberCoroutineScope()`. Not `AppScope`, not an injected long-lived scope, not an ad-hoc `CoroutineScope(...)`.
-3. **Caller really is a UI event** — Composable callback, key handler, lifecycle hook. Not another business-logic class calling through the state holder.
+1. **State-Holder für eine UI-Fläche** — ein ViewModel, eine Decompose-Component, ein Feature-Model oder ein äquivalenter UI-State-Holder. Kein Repository, Manager, Use Case oder Datenquelle.
+2. **Lifecycle-gebundener Scope** — `viewModelScope`, der `coroutineScope` einer Component, der beim Destroy gecancelt wird, das `rememberCoroutineScope()` eines Composables. Nicht `AppScope`, kein injizierter langlebiger Scope, kein ad-hoc `CoroutineScope(...)`.
+3. **Der Aufrufer ist wirklich ein UI-Event** — Composable-Callback, Key-Handler, Lifecycle-Hook. Keine andere Business-Logik-Klasse, die durch den State-Holder ruft.
 
-The repository / use case / data source layers underneath still expose `suspend` APIs. The state holder is the *only* layer where the non-suspending → suspending translation belongs.
+Die Repository-/Use-Case-/Datenquellen-Schichten darunter exponieren weiterhin `suspend`-APIs. Der State-Holder ist die *einzige* Schicht, in die die Nicht-suspendierend-→-suspendierend-Übersetzung gehört.
 
-"It feels like a state holder" isn't enough. The question is "does the UI directly bind to this?" If no, the carve-out doesn't apply.
+„Fühlt sich wie ein State-Holder an" genügt nicht. Die Frage ist „bindet die UI direkt daran?" Wenn nein, gilt die Ausnahme nicht.
 
-### 4. Stored scopes that aren't injected
+### 4. Gespeicherte Scopes, die nicht injiziert sind
 
-The same anti-pattern, without an injected scope:
+Dasselbe Anti-Pattern, ohne injizierten Scope:
 
 ```kotlin
-// ❌ BAD — same problem, scope is constructed in-class instead of injected
+// ❌ SCHLECHT — gleiches Problem, Scope wird in-class konstruiert statt injiziert
 class FooManager {
     private val scope = MainScope()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 }
 ```
 
-Lifecycle is now owned by nothing and lives forever. Replace with `suspend` APIs.
+Der Lifecycle wird jetzt von nichts besessen und lebt für immer. Durch `suspend`-APIs ersetzen.
 
-The same is true if the instantiation is nested inside a function body — `fun foo() { CoroutineScope(...).launch { … } }` is just a stored scope with extra steps. Each call leaks a new uncancellable scope; bundling it into a `by lazy` property doesn't fix the underlying issue (the scope shouldn't exist at all).
+Dasselbe gilt, wenn die Instanziierung in einem Funktions-Body verschachtelt ist — `fun foo() { CoroutineScope(...).launch { … } }` ist nur ein gespeicherter Scope mit Extraschritten. Jeder Aufruf leakt einen neuen nicht-cancelbaren Scope; ihn in eine `by lazy`-Property zu bündeln behebt das zugrunde liegende Problem nicht (der Scope sollte gar nicht existieren).
 
-### 5. DI-bound singletons / initializers that launch
+### 5. DI-gebundene Singletons / Initializer, die launchen
 
-A specific pattern that is hard to spot: a DI-bound class (`@SingleIn(AppScope)`, `@Singleton`, an `Initializer.initialize()`) launches a coroutine from its constructor / `init` block / `initialize()`. The launched work then has:
+Ein spezifisches, schwer zu erkennendes Muster: Eine DI-gebundene Klasse (`@SingleIn(AppScope)`, `@Singleton`, ein `Initializer.initialize()`) launcht eine Coroutine aus ihrem Konstruktor / `init`-Block / `initialize()`. Die gelaunchte Arbeit hat dann:
 
-- **A non-deterministic start time** — whenever the graph realizes the binding. Cold-start ordering is invisible.
-- **No observable lifecycle.** Nothing else in the codebase can see whether it's running or has crashed.
-- **No `stop()` / restart path.** If upstream enters a bad state, the loop is uncancellable.
-- **No calling code to grep for.** Readers can't find "who starts this and when".
+- **Eine nicht-deterministische Startzeit** — wann immer der Graph das Binding realisiert. Die Cold-Start-Reihenfolge ist unsichtbar.
+- **Keinen beobachtbaren Lifecycle.** Nichts sonst im Codebase kann sehen, ob sie läuft oder gecrasht ist.
+- **Keinen `stop()`- / Restart-Pfad.** Gerät Upstream in einen schlechten Zustand, ist die Loop nicht-cancelbar.
+- **Keinen aufrufenden Code zum Greppen.** Leser können nicht finden, „wer startet das und wann".
 
-§1 says scopes should be tied to the caller's lifecycle. The DI-bound variant violates this indirectly: the *scope* may be injected, but the *launch* is hidden inside construction — same effect, harder to see.
+§1 sagt, Scopes sollten an den Lifecycle des Aufrufers gebunden sein. Die DI-gebundene Variante verletzt das indirekt: Der *Scope* mag injiziert sein, aber das *Launch* ist in der Konstruktion versteckt — gleicher Effekt, schwerer zu sehen.
 
 ```kotlin
-// ❌ BAD — singleton boots work as a side effect of being constructed
+// ❌ SCHLECHT — Singleton bootet Arbeit als Side Effect des Konstruiertwerdens
 @SingleIn(AppScope::class)
 @Inject
 class TokenRefresher(
@@ -173,7 +174,7 @@ class TokenRefresher(
     }
 }
 
-// ❌ ALSO BAD — Initializer.initialize() that *launches*, not just registers
+// ❌ EBENFALLS SCHLECHT — Initializer.initialize(), das *launcht*, nicht nur registriert
 class TokenInvalidatorInitializer @Inject constructor(
     @ForScope(AppScope::class) private val scope: CoroutineScope,
     private val store: AuthStore,
@@ -185,37 +186,37 @@ class TokenInvalidatorInitializer @Inject constructor(
 }
 ```
 
-Both look like "application-scoped singletons", but the **When NOT to apply** carve-out is *not* permission to launch from `init` / `initialize()`. It's permission for a singleton to own a scope when its API is suspending.
+Beide sehen aus wie „application-scoped Singletons", aber die Ausnahme unter **Wann NICHT anwenden** ist *keine* Erlaubnis, aus `init` / `initialize()` zu launchen. Sie ist Erlaubnis für ein Singleton, einen Scope zu besitzen, wenn seine API suspendierend ist.
 
-#### First ask: does this background-loop class need to exist at all?
+#### Frage zuerst: muss diese Background-Loop-Klasse überhaupt existieren?
 
-Most background-loop classes exist only because no one inverted the observation. Three answers, in order of preference:
+Die meisten Background-Loop-Klassen existieren nur, weil niemand die Beobachtung invertiert hat. Drei Antworten, in Reihenfolge der Präferenz:
 
-**Pattern 1 — invert into the consumer.** The class observes state forever to react when it changes. But *someone* mutates the state — sign-out flow, profile switch, flag-update handler. That mutation site is already in a coroutine context and is the natural place to do the work directly.
+**Muster 1 — in den Consumer invertieren.** Die Klasse beobachtet State für immer, um zu reagieren, wenn er sich ändert. Aber *jemand* mutiert den State — Sign-out-Flow, Profilwechsel, Flag-Update-Handler. Diese Mutationsstelle ist bereits in einem Coroutine-Kontext und ist der natürliche Ort, die Arbeit direkt zu tun.
 
 ```kotlin
-// ✅ GOOD — no background loop, no scope, no class. The mutation site does the work.
+// ✅ GUT — keine Background-Loop, kein Scope, keine Klasse. Die Mutationsstelle tut die Arbeit.
 class Authenticator(
     private val authStore: AuthStore,
     private val tokenInvalidator: TokenInvalidator,
 ) {
     suspend fun signOut() {
         authStore.clearTokens()
-        tokenInvalidator.invalidate()   // direct call at the mutation site
+        tokenInvalidator.invalidate()   // direkter Aufruf an der Mutationsstelle
     }
 }
 ```
 
-The background-loop class is **deleted**. The work happens where the state changes.
+Die Background-Loop-Klasse wird **gelöscht**. Die Arbeit passiert, wo sich der State ändert.
 
-When this applies: the consumer of the state has a clear lifecycle (a use case, an Authenticator, a service handler) and can perform the reaction inline.
+Wann das gilt: Der Consumer des States hat einen klaren Lifecycle (ein Use Case, ein Authenticator, ein Service-Handler) und kann die Reaktion inline ausführen.
 
-**Pattern 2 — scheduled work.** Genuinely periodic or deferred. Use WorkManager / BGTaskScheduler. The enqueue is one-shot; make it suspending and call it once from an orchestrator that already runs at startup.
+**Muster 2 — geplante Arbeit.** Echt periodisch oder verzögert. Nutze WorkManager / BGTaskScheduler. Das Enqueue ist einmalig; mache es suspendierend und rufe es einmal aus einem Orchestrator auf, der bereits beim Start läuft.
 
-**Pattern 3 — explicit named launch site.** Sometimes the consumer is a synchronous API with no observable lifecycle (e.g., OpenTelemetry's `Sampler.shouldSample(...)`, an AIDL stub fanout, a broadcast receiver bridge). The observation has to live somewhere coroutine-aware, but it must live at an *explicit named call site* — not in the class's own `init`.
+**Muster 3 — explizite benannte Launch-Stelle.** Manchmal ist der Consumer eine synchrone API ohne beobachtbaren Lifecycle (z. B. OpenTelemetrys `Sampler.shouldSample(...)`, ein AIDL-Stub-Fanout, eine Broadcast-Receiver-Bridge). Die Beobachtung muss irgendwo coroutine-bewusst leben, aber sie muss an einer *expliziten benannten Aufrufstelle* leben — nicht im eigenen `init` der Klasse.
 
 ```kotlin
-// ✅ GOOD — work is named; an explicit call site owns the launch
+// ✅ GUT — Arbeit ist benannt; eine explizite Aufrufstelle besitzt das Launch
 @SingleIn(AppScope::class)
 class OtelConfigurableSampler(...) : Sampler {
     @Volatile private var delegate: Sampler = ...
@@ -229,28 +230,28 @@ class OtelConfigurableSampler(...) : Sampler {
     override fun shouldSample(...) = delegate.shouldSample(...)
 }
 
-// wired explicitly at the OTel SDK init module:
+// explizit im OTel-SDK-Init-Modul verdrahtet:
 applicationScope.launch { otelSampler.observeRate(featureFlags) }
 ```
 
-When this applies: the consumer is a synchronous API that calls *into* you with no observable lifecycle. The launch can't be invertible, but it must still be visible at a named call site.
+Wann das gilt: Der Consumer ist eine synchrone API, die *in* dich hineinruft, ohne beobachtbaren Lifecycle. Das Launch kann nicht invertierbar sein, muss aber trotzdem an einer benannten Aufrufstelle sichtbar sein.
 
-#### Test for which pattern fits
+#### Test, welches Muster passt
 
-"Is the consumer's lifecycle observable to me?"
+„Ist der Lifecycle des Consumers für mich beobachtbar?"
 
-- **Yes, and they're already in a coroutine context** → Pattern 1. Push the subscription into them; delete the background-loop class.
-- **The work is periodic / deferred** → Pattern 2. Suspend enqueue called once.
-- **No, they're a synchronous API with no observable lifecycle** → Pattern 3. Explicit launch site, not `init`.
+- **Ja, und sie sind bereits in einem Coroutine-Kontext** → Muster 1. Schiebe die Subscription in sie; lösche die Background-Loop-Klasse.
+- **Die Arbeit ist periodisch / verzögert** → Muster 2. Suspend-Enqueue, einmal aufgerufen.
+- **Nein, sie sind eine synchrone API ohne beobachtbaren Lifecycle** → Muster 3. Explizite Launch-Stelle, nicht `init`.
 
-If a fourth answer seems to fit — e.g., "I want a `Bootable` interface that launches everything for me" — that's the same anti-pattern with an extra layer of abstraction. The whole point is that launches be *visible*; auto-discovery by interface defeats it.
+Scheint eine vierte Antwort zu passen — z. B. „Ich will ein `Bootable`-Interface, das alles für mich launcht" — ist das dasselbe Anti-Pattern mit einer Extra-Abstraktionsschicht. Der ganze Sinn ist, dass Launches *sichtbar* sind; Auto-Discovery per Interface vereitelt das.
 
-#### Initializers are still fine — *if they only register*
+#### Initializer sind weiterhin in Ordnung — *wenn sie nur registrieren*
 
-The `Initializer` pattern is correct when `initialize()` *registers* a listener or hook. The bug is when `initialize()` *launches* a coroutine.
+Das `Initializer`-Muster ist korrekt, wenn `initialize()` einen Listener oder Hook *registriert*. Der Bug ist, wenn `initialize()` eine Coroutine *launcht*.
 
 ```kotlin
-// ✅ GOOD Initializer — registers a contributor, doesn't launch
+// ✅ GUTER Initializer — registriert einen Contributor, launcht nicht
 class FavouritesContributorInitializer @Inject constructor(
     private val registry: ContributorRegistry,
     private val favouritesContributor: FavouritesContributor,
@@ -261,180 +262,180 @@ class FavouritesContributorInitializer @Inject constructor(
 }
 ```
 
-**`Initializer.initialize()` must not `launch` a coroutine.** If yours does, it's a Pattern 1/2/3 candidate.
+**`Initializer.initialize()` darf keine Coroutine `launch`en.** Wenn deins es tut, ist es ein Kandidat für Muster 1/2/3.
 
-#### Diagnostic for review
+#### Diagnose fürs Review
 
-- Where is the start moment defined? If "wherever DI realizes me", bad.
-- Who can observe whether the work is running? If "no one", bad.
-- Who can stop or restart it? If "no one", bad.
-- Can a reader grep for the launch site? If no, bad.
+- Wo ist der Startmoment definiert? Wenn „wo auch immer DI mich realisiert", schlecht.
+- Wer kann beobachten, ob die Arbeit läuft? Wenn „niemand", schlecht.
+- Wer kann sie stoppen oder neu starten? Wenn „niemand", schlecht.
+- Kann ein Leser nach der Launch-Stelle greppen? Wenn nein, schlecht.
 
-If the answers are "the consumer / the orchestrator / the named call site" — you're good.
+Sind die Antworten „der Consumer / der Orchestrator / die benannte Aufrufstelle" — bist du gut.
 
-### 6. Swallowing `CancellationException`
+### 6. `CancellationException` schlucken
 
-A `catch` clause around a `suspend` call that matches `CancellationException` — directly, or through `Exception` / `Throwable` — and doesn't rethrow usually turns cancellation into silent success. The parent coroutine thinks the child finished; the child keeps running (or its side effects do); the cancellation contract is broken.
+Ein `catch`-Block um einen `suspend`-Aufruf, der `CancellationException` matcht — direkt oder über `Exception` / `Throwable` — und nicht rethrowt, verwandelt Cancellation meist in stillen Erfolg. Die Parent-Coroutine denkt, das Kind sei fertig; das Kind läuft weiter (oder seine Side Effects tun es); der Cancellation-Contract ist gebrochen.
 
-Same failure shape as §1's stored-scope bug, viewed from the other end: §1 hides the work *from* the caller's lifecycle; this hides cancellation *from* the work.
+Gleiche Fehlerform wie der Gespeicherter-Scope-Bug aus §1, vom anderen Ende betrachtet: §1 versteckt die Arbeit *vor* dem Lifecycle des Aufrufers; das hier versteckt Cancellation *vor* der Arbeit.
 
 ```kotlin
-// ❌ BAD — catches CancellationException, never rethrows
+// ❌ SCHLECHT — fängt CancellationException, rethrowt nie
 suspend fun fetch() {
     try {
         api.load()
-    } catch (e: Exception) {           // matches CancellationException too
+    } catch (e: Exception) {           // matcht auch CancellationException
         logger.warn("load failed", e)
     }
 }
 
-// ❌ ALSO BAD — runCatching has the same problem
+// ❌ EBENFALLS SCHLECHT — runCatching hat dasselbe Problem
 suspend fun fetch() {
     runCatching { api.load() }
         .onFailure { logger.warn("load failed", it) }
 }
 ```
 
-The acceptable shapes:
+Die akzeptablen Formen:
 
 ```kotlin
-// ✅ Separate catch first
+// ✅ Separater catch zuerst
 try { api.load() }
 catch (e: CancellationException) { throw e }
 catch (e: Exception) { logger.warn("load failed", e) }
 
-// ✅ Conditional rethrow inside the broad catch
+// ✅ Bedingter Rethrow im breiten catch
 try { api.load() }
 catch (e: Exception) {
     if (e is CancellationException) throw e
     logger.warn("load failed", e)
 }
 
-// ✅ ensureActive() — good when the catch handles ordinary failures and you only need
-// to rethrow if the current coroutine is cancelled
+// ✅ ensureActive() — gut, wenn der catch gewöhnliche Fehler behandelt und du nur
+// rethrowen musst, falls die aktuelle Coroutine gecancelt ist
 try { api.load() }
 catch (e: Exception) {
     currentCoroutineContext().ensureActive()
     logger.warn("load failed", e)
 }
 
-// ✅ runCatching with explicit guard
+// ✅ runCatching mit explizitem Guard
 runCatching { api.load() }
     .onFailure {
         if (it is CancellationException) throw it
         logger.warn("load failed", it)
     }
 
-// ✅ runCatching terminated with getOrThrow (cancellation flows back out)
+// ✅ runCatching mit getOrThrow terminiert (Cancellation fließt wieder heraus)
 runCatching { api.load() }.getOrThrow()
 ```
 
-The trigger is "a suspend call inside the `try`", not "the enclosing function is declared `suspend`". This applies inside any suspending body — `suspend fun`, a `launch { … }` lambda, a Flow `collect { … }`, etc.
+Der Auslöser ist „ein suspend-Aufruf im `try`", nicht „die umgebende Funktion ist als `suspend` deklariert". Das gilt in jedem suspendierenden Body — `suspend fun`, ein `launch { … }`-Lambda, ein Flow-`collect { … }` usw.
 
-The common carve-out is an intentionally local timeout: catching `TimeoutCancellationException` from your own `withTimeout` and converting it to a domain result can be correct. Keep that catch narrow and close to the timeout. Do not use it as permission to swallow arbitrary cancellation.
+Die häufige Ausnahme ist ein bewusst lokales Timeout: Ein `TimeoutCancellationException` aus deinem eigenen `withTimeout` zu fangen und in ein Domänen-Ergebnis umzuwandeln kann korrekt sein. Halte diesen catch eng und nah am Timeout. Nutze ihn nicht als Erlaubnis, beliebige Cancellation zu schlucken.
 
-Catching a non-cancellation subtype (`IOException`, your own exception types) is fine — they don't extend `CancellationException`.
+Einen Nicht-Cancellation-Subtyp zu fangen (`IOException`, eigene Exception-Typen) ist in Ordnung — sie erweitern `CancellationException` nicht.
 
 ### 7. `runBlocking`
 
-`runBlocking` parks the current thread until the lambda finishes. Inside suspend-capable or lifecycle-scoped application paths it is wrong: a thread that meant to be async is now blocked, structured concurrency is broken, and any cancellation upstream has no effect. It is the "callee makes a structural decision for the caller" anti-pattern at its most direct.
+`runBlocking` parkt den aktuellen Thread, bis das Lambda fertig ist. In suspend-fähigen oder lifecycle-scoped Anwendungspfaden ist es falsch: Ein Thread, der async sein sollte, ist jetzt blockiert, Structured Concurrency ist gebrochen, und jede Cancellation von Upstream hat keine Wirkung. Es ist das „Aufgerufener trifft eine strukturelle Entscheidung für den Aufrufer"-Anti-Pattern in seiner direktesten Form.
 
 ```kotlin
-// ❌ BAD — bridging to suspend by blocking the calling thread
+// ❌ SCHLECHT — zu suspend brücken, indem der aufrufende Thread blockiert wird
 fun saveUser(user: User) {
     runBlocking { repository.save(user) }
 }
 ```
 
-Three fixes, by context:
+Drei Fixes, je nach Kontext:
 
-**Suspend-capable application code** — make the function `suspend`:
+**Suspend-fähiger Anwendungscode** — mache die Funktion `suspend`:
 
 ```kotlin
-// ✅ GOOD
+// ✅ GUT
 suspend fun saveUser(user: User) = repository.save(user)
 ```
 
-If the immediate caller can't suspend either (a non-suspending UI callback, a `BroadcastReceiver` hook), use the existing lifecycle-bound scope at the boundary — see §3's UI ↔ state-holder carve-out. The fix is at the boundary, not inside `saveUser`.
+Kann auch der unmittelbare Aufrufer nicht suspenden (ein nicht-suspendierender UI-Callback, ein `BroadcastReceiver`-Hook), nutze den vorhandenen lifecycle-gebundenen Scope an der Grenze — siehe die UI-↔-State-Holder-Ausnahme in §3. Der Fix ist an der Grenze, nicht innerhalb von `saveUser`.
 
-Legitimate blocking boundaries exist: `main` in a CLI tool, Java interop APIs that must return synchronously, framework callbacks with no suspending alternative, and migration shims. Keep `runBlocking` at that outer boundary, keep the body small, and call suspending code immediately.
+Legitime Blocking-Grenzen existieren: `main` in einem CLI-Tool, Java-Interop-APIs, die synchron zurückgeben müssen, Framework-Callbacks ohne suspendierende Alternative und Migrations-Shims. Halte `runBlocking` an dieser äußeren Grenze, halte den Body klein und rufe sofort suspendierenden Code auf.
 
-**Tests** — use `runTest`:
+**Tests** — nutze `runTest`:
 
 ```kotlin
-// ❌ BAD — real time, slow tests, no virtual delay
+// ❌ SCHLECHT — Echtzeit, langsame Tests, kein virtuelles delay
 @Test fun loadsUser() = runBlocking {
     assertThat(repository.load().name).isEqualTo("Alice")
 }
 
-// ✅ GOOD
+// ✅ GUT
 @Test fun loadsUser() = runTest {
     assertThat(repository.load().name).isEqualTo("Alice")
 }
 ```
 
-`runTest` gives you virtual time (`delay()` returns immediately), `TestDispatcher` integration, and proper coroutine cleanup. Real-time `runBlocking` in tests makes them slow and flaky.
+`runTest` gibt dir virtuelle Zeit (`delay()` kehrt sofort zurück), `TestDispatcher`-Integration und ordentliches Coroutine-Cleanup. Echtzeit-`runBlocking` in Tests macht sie langsam und flaky.
 
-**`ContentProvider` carve-out** — Android's `ContentProvider` methods (`query`, `insert`, `update`, `delete`, `onCreate`, `call`) are synchronous from outside the process. There is no way to suspend them. Inside *member functions* of a `ContentProvider` subclass (direct or indirect — not companion objects), `runBlocking` is the unavoidable bridge. Keep the body as short as possible and call into suspending code immediately:
+**`ContentProvider`-Ausnahme** — Androids `ContentProvider`-Methoden (`query`, `insert`, `update`, `delete`, `onCreate`, `call`) sind von außerhalb des Prozesses synchron. Es gibt keine Möglichkeit, sie zu suspenden. Innerhalb von *Member-Funktionen* einer `ContentProvider`-Subklasse (direkt oder indirekt — keine Companion-Objekte) ist `runBlocking` die unvermeidbare Brücke. Halte den Body so kurz wie möglich und rufe sofort suspendierenden Code auf:
 
 ```kotlin
-// ✅ Acceptable in ContentProvider members only
+// ✅ Nur in ContentProvider-Membern akzeptabel
 class MyProvider : ContentProvider() {
     override fun query(...): Cursor? = runBlocking { dao.query(...) }
 }
 ```
 
-This carve-out is for `android.content.ContentProvider` subclasses *only*. "It's like a `ContentProvider`" doesn't apply, and a `runBlocking` in a `ContentProvider`'s companion object is still a regular violation — the helper isn't part of the framework's synchronous surface.
+Diese Ausnahme gilt *nur* für `android.content.ContentProvider`-Subklassen. „Es ist wie ein `ContentProvider`" gilt nicht, und ein `runBlocking` im Companion-Objekt eines `ContentProvider` ist weiterhin eine reguläre Verletzung — der Helfer ist nicht Teil der synchronen Oberfläche des Frameworks.
 
-## Quick reference
+## Kurzreferenz
 
-| Symptom | Anti-pattern | Fix |
+| Symptom | Anti-Pattern | Fix |
 |---|---|---|
-| Class has `private val scope: CoroutineScope` | Stored scope on the callee | Remove. Make public APIs `suspend`. |
-| `init { scope.launch { ... } }` | Construction-time launch | Move to `suspend fun init()` / `login()` |
-| `fun foo() { scope.launch { ... } }` on a repository/manager/use case | Fire-and-forget from non-UI class | `suspend fun foo()`, let UI state holder pick the scope |
-| `fun onClick() { viewModelScope.launch { ... } }` on a state holder, called from UI | UI ↔ state-holder boundary — fine | Keep as-is (see §3 carve-out) |
-| `private val scope = MainScope()` | Internally-constructed stored scope | Same — remove, make APIs `suspend` |
-| `@SingleIn(AppScope) class X(scope) { init { scope.launch { … } } }` | DI-bound opaque launch (§5) | Expose `suspend fun run()`, launch from startup orchestrator |
-| `class Y : Initializer { override fun initialize() { scope.launch { … } } }` | Initializer that launches, not registers (§5) | Same — `suspend fun run()`, orchestrator owns lifecycle |
-| `try { suspendCall() } catch (e: Exception\|Throwable\|CancellationException) { … }` with no rethrow | Swallowed cancellation (§6) | Prefer `catch (e: CancellationException) { throw e }`; use `ensureActive()` only when that matches the intent |
-| `runCatching { suspendCall() }.onFailure { … }` with no cancellation guard | Same shape as above (§6) | Add `if (it is CancellationException) throw it`, or terminate with `.getOrThrow()` |
-| `runBlocking { … }` inside suspend-capable app code | Thread-blocking bridge (§7) | Make caller `suspend`; or use a lifecycle scope at the boundary |
-| `runBlocking { … }` in a test | Same — real-time bridging (§7) | Use `runTest { … }` |
-| `runBlocking { … }` inside a `ContentProvider.query`/`insert`/… member | Carve-out (§7) | Acceptable; keep the body minimal |
+| Klasse hat `private val scope: CoroutineScope` | Gespeicherter Scope auf dem Aufgerufenen | Entfernen. Öffentliche APIs `suspend` machen. |
+| `init { scope.launch { ... } }` | Launch zur Konstruktionszeit | Nach `suspend fun init()` / `login()` verschieben |
+| `fun foo() { scope.launch { ... } }` auf einem Repository/Manager/Use Case | Fire-and-forget aus Nicht-UI-Klasse | `suspend fun foo()`, UI-State-Holder wählt den Scope |
+| `fun onClick() { viewModelScope.launch { ... } }` auf einem State-Holder, von UI aufgerufen | UI-↔-State-Holder-Grenze — in Ordnung | So lassen (siehe §3-Ausnahme) |
+| `private val scope = MainScope()` | Intern konstruierter gespeicherter Scope | Dasselbe — entfernen, APIs `suspend` machen |
+| `@SingleIn(AppScope) class X(scope) { init { scope.launch { … } } }` | DI-gebundenes undurchsichtiges Launch (§5) | `suspend fun run()` exponieren, aus Startup-Orchestrator launchen |
+| `class Y : Initializer { override fun initialize() { scope.launch { … } } }` | Initializer, der launcht statt registriert (§5) | Dasselbe — `suspend fun run()`, Orchestrator besitzt den Lifecycle |
+| `try { suspendCall() } catch (e: Exception\|Throwable\|CancellationException) { … }` ohne Rethrow | Geschluckte Cancellation (§6) | `catch (e: CancellationException) { throw e }` bevorzugen; `ensureActive()` nur, wenn es zur Absicht passt |
+| `runCatching { suspendCall() }.onFailure { … }` ohne Cancellation-Guard | Gleiche Form wie oben (§6) | `if (it is CancellationException) throw it` hinzufügen oder mit `.getOrThrow()` terminieren |
+| `runBlocking { … }` in suspend-fähigem App-Code | Thread-blockierende Brücke (§7) | Aufrufer `suspend` machen; oder Lifecycle-Scope an der Grenze nutzen |
+| `runBlocking { … }` in einem Test | Dasselbe — Echtzeit-Brücken (§7) | `runTest { … }` nutzen |
+| `runBlocking { … }` in einem `ContentProvider.query`/`insert`/…-Member | Ausnahme (§7) | Akzeptabel; Body minimal halten |
 
-## Refactoring guidance
+## Refactoring-Guidance
 
-Removing an existing offender:
+Einen bestehenden Verstoß entfernen:
 
-1. **Start at the leaf.** Pick the class farthest from any UI — usually a repository or data source. Its public surface should be the easiest to convert.
-2. **Convert public functions to `suspend`** one at a time. The compiler will surface every caller.
-3. **At each caller, choose the scope deliberately:** `viewModelScope`, `lifecycleScope`, `coroutineScope { }`, or an explicit job. This is the choice that was missing before.
-4. **Delete the `CoroutineScope` constructor parameter** once nothing uses it. Remove the injection binding.
+1. **Beginne am Leaf.** Wähle die Klasse, die am weitesten von jeder UI entfernt ist — meist ein Repository oder eine Datenquelle. Ihre öffentliche Oberfläche sollte am leichtesten zu konvertieren sein.
+2. **Konvertiere öffentliche Funktionen zu `suspend`**, eine nach der anderen. Der Compiler bringt jeden Aufrufer zum Vorschein.
+3. **Wähle an jeder Aufrufstelle den Scope bewusst:** `viewModelScope`, `lifecycleScope`, `coroutineScope { }` oder einen expliziten Job. Das ist die Entscheidung, die vorher fehlte.
+4. **Lösche den `CoroutineScope`-Konstruktor-Parameter**, sobald ihn nichts mehr nutzt. Entferne das Injection-Binding.
 
-Don't try to fix every class in one MR. Removing an anti-pattern is incremental work.
+Versuche nicht, jede Klasse in einer MR zu fixen. Ein Anti-Pattern zu entfernen ist inkrementelle Arbeit.
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- **UI state holders absorbing UI events.** A ViewModel/Component/feature model with `fun onClick(...) { viewModelScope.launch { ... } }` is correct — that's the boundary the framework needs. See §3 carve-out.
-- **Lifecycle owners with explicit cancellation and error policy.** Actors/services, app infrastructure, or application-scoped singletons may own a scope when they expose clear `close`/`cancel`/restart behavior or otherwise map directly to an application lifecycle. Inject `Application.applicationScope` explicitly rather than creating one ad-hoc. **This is not permission to launch from `init` / `initialize()`** — see §5.
-- **Already-suspending APIs** don't need any of this work.
-- **Tests** sometimes use `TestScope` as a deliberate ambient scope — that's a different pattern with explicit virtual-time control.
+- **UI-State-Holder, die UI-Events aufnehmen.** Ein ViewModel/Component/Feature-Model mit `fun onClick(...) { viewModelScope.launch { ... } }` ist korrekt — das ist die Grenze, die das Framework braucht. Siehe §3-Ausnahme.
+- **Lifecycle-Owner mit expliziter Cancellation- und Fehler-Policy.** Actors/Services, App-Infrastruktur oder application-scoped Singletons dürfen einen Scope besitzen, wenn sie klares `close`/`cancel`/Restart-Verhalten exponieren oder anderweitig direkt auf einen Application-Lifecycle abbilden. Injiziere `Application.applicationScope` explizit, statt einen ad-hoc zu erzeugen. **Das ist keine Erlaubnis, aus `init` / `initialize()` zu launchen** — siehe §5.
+- **Bereits suspendierende APIs** brauchen nichts von dieser Arbeit.
+- **Tests** nutzen manchmal `TestScope` als bewussten Ambient-Scope — das ist ein anderes Muster mit expliziter virtueller Zeitkontrolle.
 
-## Red flags during review
+## Warnzeichen im Review
 
-These thoughts mean the anti-pattern is back:
+Diese Gedanken bedeuten, dass das Anti-Pattern zurück ist:
 
-| Thought | Reality |
+| Gedanke | Realität |
 |---|---|
-| "I'll just add a `CoroutineExceptionHandler` to the scope" | The problem isn't error handling. The problem is the scope shouldn't exist. |
-| "I need to launch from `init` so the data's ready when consumers arrive" | Consumers reading state that isn't ready is the bug. Use phasing. |
-| "The caller doesn't want to deal with `suspend`" | Then the caller chooses fire-and-forget at their scope. Don't decide for them. |
-| "It's just a small fire-and-forget call" | Silent cancellation makes every fire-and-forget a potential silent failure. |
-| "We caught and logged the exception, so we're fine" | Did the catch rethrow `CancellationException`? If no, the coroutine is silently un-cancelled. (§6) |
-| "It's just one `runBlocking`, in a non-critical path" | Every `runBlocking` asserts the caller has no async option. If they do, it's the wrong primitive. (§7) |
-| "Tests are simpler with `runBlocking`" | They run in real time, can't fast-forward `delay`, and lose `TestDispatcher` semantics. Use `runTest`. (§7) |
+| „Ich füge einfach einen `CoroutineExceptionHandler` zum Scope hinzu" | Das Problem ist nicht die Fehlerbehandlung. Das Problem ist, dass der Scope nicht existieren sollte. |
+| „Ich muss aus `init` launchen, damit die Daten bereit sind, wenn Consumer ankommen" | Consumer, die nicht bereiten State lesen, sind der Bug. Nutze Phasing. |
+| „Der Aufrufer will sich nicht mit `suspend` befassen" | Dann wählt der Aufrufer Fire-and-forget an seinem Scope. Entscheide nicht für ihn. |
+| „Es ist nur ein kleiner Fire-and-forget-Aufruf" | Silent Cancellation macht jedes Fire-and-forget zu einem potenziellen stillen Fehlschlag. |
+| „Wir haben die Exception gefangen und geloggt, also ist alles gut" | Hat der catch `CancellationException` rethrowt? Wenn nein, ist die Coroutine still un-gecancelt. (§6) |
+| „Es ist nur ein `runBlocking`, in einem nicht-kritischen Pfad" | Jedes `runBlocking` behauptet, der Aufrufer habe keine Async-Option. Wenn doch, ist es das falsche Primitive. (§7) |
+| „Tests sind mit `runBlocking` einfacher" | Sie laufen in Echtzeit, können `delay` nicht vorspulen und verlieren `TestDispatcher`-Semantik. Nutze `runTest`. (§7) |
 
-## Related
+## Verwandt
 
-- [`kotlin-flow-state-event-modeling`](../kotlin-flow-state-event-modeling/SKILL.md) — `StateFlow`, `SharedFlow`, `Channel`, `stateIn`, one-shot events, and related modeling.
+- [`kotlin-flow-state-event-modeling`](../kotlin-flow-state-event-modeling/SKILL.md) — `StateFlow`, `SharedFlow`, `Channel`, `stateIn`, Einmal-Events und verwandte Modellierung.

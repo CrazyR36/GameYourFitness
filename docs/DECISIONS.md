@@ -193,3 +193,20 @@ Konsequenzen, Issue-Referenz.
   pflegen, Inhalt sichten. **Zurückgestellt** (Nutzer-Entscheidung, 2026-07-22):
   SessionStart-Hook und `settings.json`-Permission-Allowlist.
 - **Issue:** Session „improve-agentic-work"
+
+## 2026-07-22 — Vendored Handwerks-Skills ins Deutsche übersetzt
+
+- **Entscheidung:** Alle 18 vendored `compose-*`/`kotlin-*`-Skills (chrisbanes) wurden ins
+  Deutsche übersetzt (Prosa, Tabellen, Code-Kommentare; Code, `name:`-IDs, API-Bezeichner
+  und URLs unverändert).
+- **Alternativen:** Englisch belassen (funktional identisch); nur die `description:`-Felder
+  übersetzen.
+- **Begründung:** Konsistenz mit der durchgehend deutschen Projektsprache (CLAUDE.md,
+  DECISIONS.md, eigene Skills) und leichtere Lesbarkeit/Review durch den Betreiber
+  (ausdrücklicher Wunsch). Funktional ändert die Sprache nichts — Skills steuern das
+  Verhalten des Agenten, nicht seine Antwortsprache.
+- **Konsequenzen:** Die Skills sind jetzt ein **übersetzter Fork**; „Update = neuen Tag
+  ziehen" ist nicht mehr verlustfrei (überschreibt die Übersetzung). Update-Vorgehen steht in
+  `.claude/skills/NOTICE-chrisbanes-skills.md`; jede Datei trägt einen Apache-2.0-
+  Änderungshinweis. Rückbau auf die englischen Originale jederzeit möglich.
+- **Issue:** Session „improve-agentic-work"

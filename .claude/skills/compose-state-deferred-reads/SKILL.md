@@ -1,51 +1,52 @@
 ---
 name: compose-state-deferred-reads
-description: Use when Jetpack Compose code reads scroll, animation, gesture, or other frame-rate State in composition, passes changing values across composable boundaries, uses value-form layout/draw modifiers, or back-writes observable state from a later phase into one that's already run.
+description: "Nutze diesen Skill, wenn Jetpack-Compose-Code Scroll-, Animations-, Gesten- oder anderen frame-rate-State in der Composition liest, sich ändernde Werte über Composable-Grenzen reicht, Wert-Form-Layout-/Draw-Modifier nutzt oder beobachtbaren State aus einer späteren Phase in eine bereits gelaufene zurückschreibt."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose state deferred reads
+# Compose: State Deferred Reads
 
-## Core principle
+## Grundprinzip
 
-State reads invalidate the phase that reads them. If a `State<T>` is read in a composable body, changes invalidate composition. If it is read in layout or draw, changes can invalidate only layout or draw. Frame-rate state such as scroll offsets, animations, and drag positions usually belongs in layout/draw, not composition.
+State-Reads invalidieren die Phase, die sie liest. Wird ein `State<T>` in einem Composable-Body gelesen, invalidieren Änderungen die Composition. Wird er in Layout oder Draw gelesen, können Änderungen nur Layout oder Draw invalidieren. Frame-rate-State wie Scroll-Offsets, Animationen und Drag-Positionen gehört meist in Layout/Draw, nicht in die Composition.
 
-**Back-writing** is the symmetric failure mode: writing observable state from a phase that triggers invalidation of an earlier phase. Compose phases run composition → layout → draw. Writing snapshot-backed state from layout or draw to state read in composition invalidates composition; writing during composition to state read earlier in the same composition does the same. Both schedule extra work — often cascading into sibling lazy items.
+**Back-Writing** ist der symmetrische Fehlermodus: beobachtbaren State aus einer Phase schreiben, die die Invalidierung einer früheren Phase auslöst. Compose-Phasen laufen Composition → Layout → Draw. Snapshot-gestützten State aus Layout oder Draw in State zu schreiben, der in der Composition gelesen wird, invalidiert die Composition; während der Composition in State zu schreiben, der früher in derselben Composition gelesen wird, tut dasselbe. Beides plant Extra-Arbeit — oft kaskadierend in Geschwister-Lazy-Items.
 
-The fix is structural: keep the `State<T>` or a provider lambda and read the value inside a layout/draw callback; capture measurements in callbacks and apply them in the measure phase, not by reading measurement state in sibling composable bodies.
+Der Fix ist strukturell: Behalte den `State<T>` oder ein Provider-Lambda und lies den Wert in einem Layout-/Draw-Callback; erfasse Messungen in Callbacks und wende sie in der Measure-Phase an, nicht durch das Lesen von Measurement-State in Geschwister-Composable-Bodies.
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-- `val x by animate*AsState(...)` is passed to `Modifier.offset(x = ...)`, `Modifier.size(...)`, `Modifier.graphicsLayer(...)`, or another value-form modifier.
-- `LazyListState.firstVisibleItemScrollOffset`, `ScrollState.value`, `Animatable.value`, or gesture state is read in a composable body.
-- A composable takes `scrollOffset: Int`, `progress: Float`, `dragOffset: Offset`, or similar frame-rate values.
-- Recomposition counters climb during scroll, animation, or gestures even when data is stable.
-- A composable body calls `stateMap[key] = …`, `list.addAll(…)`, or similar on every recomposition (back-writing composition → composition).
-- One lazy item captures size with `onSizeChanged` / `onGloballyPositioned` and a sibling reads that height in composition (`Modifier.height(state.dp)`) — back-writing layout → composition.
+- `val x by animate*AsState(...)` wird an `Modifier.offset(x = ...)`, `Modifier.size(...)`, `Modifier.graphicsLayer(...)` oder einen anderen Wert-Form-Modifier übergeben.
+- `LazyListState.firstVisibleItemScrollOffset`, `ScrollState.value`, `Animatable.value` oder Gesten-State wird in einem Composable-Body gelesen.
+- Ein Composable nimmt `scrollOffset: Int`, `progress: Float`, `dragOffset: Offset` oder ähnliche frame-rate-Werte.
+- Recomposition-Zähler steigen bei Scroll, Animation oder Gesten, selbst wenn Daten stabil sind.
+- Ein Composable-Body ruft `stateMap[key] = …`, `list.addAll(…)` oder Ähnliches bei jeder Recomposition auf (Back-Writing Composition → Composition).
+- Ein Lazy-Item erfasst die Größe mit `onSizeChanged` / `onGloballyPositioned` und ein Geschwister liest diese Höhe in der Composition (`Modifier.height(state.dp)`) — Back-Writing Layout → Composition.
 
-## 0. Back-writing
+## 0. Back-Writing
 
-**Back-writing** = writing observable state in one phase that triggers invalidation of an earlier (or the current) phase. Compose runs composition → layout → draw, so:
+**Back-Writing** = beobachtbaren State in einer Phase schreiben, die die Invalidierung einer früheren (oder der aktuellen) Phase auslöst. Compose läuft Composition → Layout → Draw, also:
 
-- Writing snapshot state during composition that's read in the same composition.
-- Writing snapshot state during layout (e.g. from `Modifier.layout`, `onSizeChanged`, `onGloballyPositioned`) that's read during composition.
-- Writing snapshot state during draw that's read during composition or layout.
+- Snapshot-State während der Composition schreiben, der in derselben Composition gelesen wird.
+- Snapshot-State während des Layouts schreiben (z. B. aus `Modifier.layout`, `onSizeChanged`, `onGloballyPositioned`), der während der Composition gelesen wird.
+- Snapshot-State während des Draws schreiben, der während der Composition oder des Layouts gelesen wird.
 
-In all cases the writer schedules extra invalidation passes — often cascading into sibling lazy items.
+In allen Fällen plant der Schreiber Extra-Invalidierungsdurchläufe — oft kaskadierend in Geschwister-Lazy-Items.
 
-Do not write to `mutableStateOf`, `mutableStateListOf`, `mutableStateMapOf`, or other snapshot-backed state from the composable body on every pass:
+Schreibe nicht bei jedem Durchlauf aus dem Composable-Body in `mutableStateOf`, `mutableStateListOf`, `mutableStateMapOf` oder anderen Snapshot-gestützten State:
 
 ```kotlin
-// ❌ BAD — mutates observable map during composition; siblings recompose repeatedly
+// ❌ SCHLECHT — mutiert die beobachtbare Map während der Composition; Geschwister komponieren wiederholt neu
 @Composable
 fun MergeOverlay(parent: Map<Key, ViewState>, overlay: Map<Key, ViewState>): Map<Key, ViewState> {
     val merged = remember { mutableStateMapOf<Key, ViewState>() }
     merged.clear()
     merged.putAll(parent)
-    merged.putAll(overlay)   // back-writing composition → composition
+    merged.putAll(overlay)   // Back-Writing Composition → Composition
     return merged
 }
 
-// ✅ GOOD — read-only merge; no composition-time writes
+// ✅ GUT — read-only Merge; keine Composition-Zeit-Writes
 @Composable
 fun MergeOverlay(parent: Map<Key, ViewState>, overlay: Map<Key, ViewState>): Map<Key, ViewState> =
     remember(parent, overlay) {
@@ -53,22 +54,22 @@ fun MergeOverlay(parent: Map<Key, ViewState>, overlay: Map<Key, ViewState>): Map
     }
 ```
 
-Prefer `remember(keys) { … }` for derived read-only snapshots. Reserve `mutableState*` writes for event callbacks (`onClick`) or effects — not for rebuilding derived data on every composition.
+Bevorzuge `remember(keys) { … }` für abgeleitete read-only Snapshots. Reserviere `mutableState*`-Writes für Event-Callbacks (`onClick`) oder Effects — nicht zum Neuaufbau abgeleiteter Daten bei jeder Composition.
 
-Callbacks like `onSizeChanged` write *during layout*. That is only safe if no earlier phase reads the resulting state — see cross-row measurement below.
+Callbacks wie `onSizeChanged` schreiben *während des Layouts*. Das ist nur sicher, wenn keine frühere Phase den resultierenden State liest — siehe phasenübergreifende Messung unten.
 
-### Cross-row measurement (layout → composition back-write)
+### Phasenübergreifende Messung (Layout → Composition Back-Write)
 
-When row A measures and row B must match A's height, do not read A's captured size in B's composable body. `onSizeChanged` writes during layout; if B reads it in composition, layout has just back-written into composition:
+Wenn Zeile A misst und Zeile B As Höhe matchen muss, lies As erfasste Größe nicht in Bs Composable-Body. `onSizeChanged` schreibt während des Layouts; liest B es in der Composition, hat Layout gerade in die Composition zurückgeschrieben:
 
 ```kotlin
 var anchorHeightPx by remember { mutableIntStateOf(0) }
 
-// ❌ BAD — B reads measurement state in composition; insertion/focus can double-recompose B
+// ❌ SCHLECHT — B liest Measurement-State in der Composition; Einfügen/Fokus können B doppelt neu komponieren
 RowA(Modifier.onSizeChanged { anchorHeightPx = it.height })
-RowB(Modifier.height(with(LocalDensity.current) { anchorHeightPx.toDp() }))  // composition read
+RowB(Modifier.height(with(LocalDensity.current) { anchorHeightPx.toDp() }))  // Composition-Read
 
-// ✅ GOOD — capture on A; apply on B in measure phase only
+// ✅ GUT — auf A erfassen; auf B nur in der Measure-Phase anwenden
 RowA(Modifier.onSizeChanged { if (it.height != anchorHeightPx) anchorHeightPx = it.height })
 RowB(
     Modifier.decorateMeasureConstraints { incoming ->
@@ -78,21 +79,21 @@ RowB(
 )
 ```
 
-`decorateMeasureConstraints` is a small layout helper (see [`compose-modifier-and-layout-style`](../compose-modifier-and-layout-style/SKILL.md)). While height is unknown, siblings use a fixed fallback in composition; once known, only layout invalidates — not an extra composition cascade.
+`decorateMeasureConstraints` ist ein kleiner Layout-Helfer (siehe [`compose-modifier-and-layout-style`](../compose-modifier-and-layout-style/SKILL.md)). Solange die Höhe unbekannt ist, nutzen Geschwister einen festen Fallback in der Composition; sobald bekannt, invalidiert nur das Layout — keine zusätzliche Composition-Kaskade.
 
-## 1. Prefer block-form modifiers
+## 1. Block-Form-Modifier bevorzugen
 
-Several modifiers have value forms and block forms. The value form receives values already read in composition; the block form can read during layout or draw.
+Mehrere Modifier haben Wert-Formen und Block-Formen. Die Wert-Form erhält bereits in der Composition gelesene Werte; die Block-Form kann während Layout oder Draw lesen.
 
 ```kotlin
-// Before: animated value read in composition by the `by` delegate
+// Vorher: animierter Wert wird in der Composition durch den `by`-Delegate gelesen
 @Composable
 fun SelectionPill(selectedIndex: Int) {
     val offsetX by animateDpAsState(120.dp * selectedIndex)
     Box(Modifier.offset(x = offsetX))
 }
 
-// After: State is kept, value is read in the layout-phase offset block
+// Nachher: State bleibt, der Wert wird im Layout-Phase-offset-Block gelesen
 @Composable
 fun SelectionPill(selectedIndex: Int) {
     val offsetX = animateDpAsState(120.dp * selectedIndex)
@@ -104,22 +105,22 @@ fun SelectionPill(selectedIndex: Int) {
 }
 ```
 
-Common replacements:
+Häufige Ersetzungen:
 
-| Composition read | Deferred read |
+| Composition-Read | Deferred Read |
 |---|---|
 | `Modifier.offset(x = animatedX)` | `Modifier.offset { IntOffset(animatedX.value.roundToPx(), 0) }` |
 | `Modifier.graphicsLayer(translationY = y)` | `Modifier.graphicsLayer { translationY = yProvider() }` |
 | `val radius by animateFloatAsState(...); drawBehind { drawCircle(radius = radius) }` | `val radius = animateFloatAsState(...); drawBehind { drawCircle(radius = radius.value) }` |
 
-The `drawBehind` block is already draw-phase; the important part is that the `State.value` read also happens inside that block.
+Der `drawBehind`-Block ist bereits Draw-Phase; wichtig ist, dass der `State.value`-Read ebenfalls in diesem Block passiert.
 
-## 2. Pass providers across composable boundaries
+## 2. Provider über Composable-Grenzen reichen
 
-If the fast-changing value would cross a composable boundary, pass a provider lambda instead of a snapshot value:
+Würde der schnell wechselnde Wert eine Composable-Grenze überschreiten, reiche ein Provider-Lambda statt eines Snapshot-Werts:
 
 ```kotlin
-// Before: HomeScreen reads scroll offset in composition and passes the value down
+// Vorher: HomeScreen liest Scroll-Offset in der Composition und reicht den Wert nach unten
 @Composable
 fun HomeScreen() {
     val listState = rememberLazyListState()
@@ -136,7 +137,7 @@ fun HeroImage(scrollOffset: Int, modifier: Modifier = Modifier) {
     )
 }
 
-// After: the only read happens inside graphicsLayer
+// Nachher: der einzige Read passiert in graphicsLayer
 @Composable
 fun HomeScreen() {
     val listState = rememberLazyListState()
@@ -166,42 +167,42 @@ fun HeroImage(scrollOffsetProvider: () -> Int, modifier: Modifier = Modifier) {
 }
 ```
 
-Suffix provider parameters with `Provider` when that clarifies the deferred-read contract.
+Versieh Provider-Parameter mit dem Suffix `Provider`, wenn das den Deferred-Read-Contract verdeutlicht.
 
-## 3. Other layout/draw read sites
+## 3. Weitere Layout-/Draw-Read-Stellen
 
-State reads can also be deferred inside:
+State-Reads können auch verzögert werden in:
 
 - `Modifier.layout { measurable, constraints -> ... }`
-- Custom `Alignment.align(...)`
-- `drawWithContent`, `drawBehind`, and other draw modifiers
-- Block-form layer/layout modifiers such as `graphicsLayer { ... }` and `offset { ... }`
+- Eigenem `Alignment.align(...)`
+- `drawWithContent`, `drawBehind` und anderen Draw-Modifiern
+- Block-Form-Layer-/Layout-Modifiern wie `graphicsLayer { ... }` und `offset { ... }`
 
-Use these when the state changes where something is placed or painted. If the state decides *which composables exist*, it belongs in composition.
+Nutze diese, wenn der State ändert, *wo* etwas platziert oder gemalt wird. Entscheidet der State, *welche Composables existieren*, gehört er in die Composition.
 
-## Quick reference
+## Kurzreferenz
 
-| Symptom | Diagnosis | Fix |
+| Symptom | Diagnose | Fix |
 |---|---|---|
-| `val x by animateFloatAsState(...)` then `Modifier.offset(...)` | `by` reads in composition | Keep `State<Float>` and read `.value` in `offset {}` |
-| `Modifier.graphicsLayer(translationY = animatedY)` | Property-argument form uses composition values | Use `graphicsLayer { translationY = ... }` |
-| `Child(scrollOffset = listState.firstVisibleItemScrollOffset)` | Fast-changing value crosses boundary | `Child(scrollOffsetProvider = { ... })` |
-| Draw block still recomposes every frame | Value was read before draw block | Move the `State.value` read inside the draw block |
-| State chooses between different UI branches | Composition decision | Keep the read in composition |
-| `mergedMap.putAll(overlay)` in composable body | Back-writing composition → composition | `remember(parent, overlay) { parent + overlay }` |
-| Sibling `Modifier.height(measuredPx.toDp())` | Back-writing layout → composition | Measure-phase constraint decoration |
-| Identity cache for read-only merge | Stale overlay risk | `remember(keys)` on immutable result |
+| `val x by animateFloatAsState(...)` dann `Modifier.offset(...)` | `by` liest in der Composition | `State<Float>` behalten und `.value` in `offset {}` lesen |
+| `Modifier.graphicsLayer(translationY = animatedY)` | Property-Argument-Form nutzt Composition-Werte | `graphicsLayer { translationY = ... }` nutzen |
+| `Child(scrollOffset = listState.firstVisibleItemScrollOffset)` | Schnell wechselnder Wert überschreitet Grenze | `Child(scrollOffsetProvider = { ... })` |
+| Draw-Block komponiert weiterhin jeden Frame neu | Wert wurde vor dem Draw-Block gelesen | Den `State.value`-Read in den Draw-Block verschieben |
+| State wählt zwischen verschiedenen UI-Branches | Composition-Entscheidung | Den Read in der Composition behalten |
+| `mergedMap.putAll(overlay)` im Composable-Body | Back-Writing Composition → Composition | `remember(parent, overlay) { parent + overlay }` |
+| Geschwister `Modifier.height(measuredPx.toDp())` | Back-Writing Layout → Composition | Measure-Phase-Constraint-Dekoration |
+| Identitäts-Cache für read-only Merge | Risiko veralteter Overlays | `remember(keys)` auf unveränderlichem Ergebnis |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- The state controls which composables are emitted.
-- The animation is one-shot, cheap, and clarity wins.
-- You are writing tests where direct value assertions are simpler.
-- Runtime evidence shows recomposition is not the bottleneck.
+- Der State steuert, welche Composables emittiert werden.
+- Die Animation ist einmalig, günstig und Klarheit gewinnt.
+- Du schreibst Tests, wo direkte Wert-Assertions einfacher sind.
+- Laufzeit-Evidenz zeigt, dass Recomposition nicht der Flaschenhals ist.
 
-## Related
+## Verwandt
 
-- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — when `mutableState*` belongs in composition vs callbacks.
-- [`compose-state-holder-ui-split`](../compose-state-holder-ui-split/SKILL.md) — where state-holder vs plain UI split applies when passing providers/lambdas across boundaries.
-- [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) — parameter stability and compiler reports.
-- [`compose-modifier-and-layout-style`](../compose-modifier-and-layout-style/SKILL.md) — measure-phase constraint decoration helper.
+- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — wann `mutableState*` in die Composition gehört vs. in Callbacks.
+- [`compose-state-holder-ui-split`](../compose-state-holder-ui-split/SKILL.md) — wo die State-Holder-vs-schlichte-UI-Trennung gilt, wenn man Provider/Lambdas über Grenzen reicht.
+- [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) — Parameter-Stabilität und Compiler-Reports.
+- [`compose-modifier-and-layout-style`](../compose-modifier-and-layout-style/SKILL.md) — Measure-Phase-Constraint-Dekorations-Helfer.
