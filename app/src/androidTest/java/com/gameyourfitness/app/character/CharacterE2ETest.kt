@@ -71,10 +71,10 @@ class CharacterE2ETest {
 
         composeRule.onNodeWithTag("character_level").assertTextEquals("1")
         composeRule.onNodeWithTag("character_rank").assertTextEquals("E")
-        composeRule.onNodeWithTag("character_stat_str").assertTextEquals("10")
-        composeRule.onNodeWithTag("character_stat_vit").assertTextEquals("10")
-        composeRule.onNodeWithTag("character_stat_agi").assertTextEquals("10")
-        composeRule.onNodeWithTag("character_stat_per").assertTextEquals("10")
+        composeRule.onNodeWithTag("character_stat_str").assertTextEquals("0")
+        composeRule.onNodeWithTag("character_stat_vit").assertTextEquals("0")
+        composeRule.onNodeWithTag("character_stat_agi").assertTextEquals("0")
+        composeRule.onNodeWithTag("character_stat_per").assertTextEquals("0")
         composeRule.onNodeWithTag("character_xp_text").assertTextEquals("0 / 100 EP")
     }
 

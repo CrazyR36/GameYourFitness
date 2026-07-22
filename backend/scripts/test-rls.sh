@@ -65,9 +65,9 @@ seen="$(echo "$rows" | jq -r '.[0].user_id')"
 xp="$(echo "$rows" | jq -r '.[0].total_xp')"
 rank="$(echo "$rows" | jq -r '.[0].rank')"
 str="$(echo "$rows" | jq -r '.[0].strength')"
-[ "$xp" = "0" ] && [ "$rank" = "E" ] && [ "$str" = "10" ] ||
-    fail "Startwerte falsch (total_xp=$xp rank=$rank strength=$str, erwartet 0/E/10)"
-pass "A sieht ausschliesslich die eigene Zeile mit Startwerten (0 EP, Rang E, Stats 10)"
+[ "$xp" = "0" ] && [ "$rank" = "E" ] && [ "$str" = "0" ] ||
+    fail "Startwerte falsch (total_xp=$xp rank=$rank strength=$str, erwartet 0/E/0)"
+pass "A sieht ausschliesslich die eigene Zeile mit Startwerten (0 EP, Rang E, Stats 0)"
 
 # 2) A kann die Zeile von B nicht lesen (gezielter Filter → leer).
 rows="$(auth_get "$TOKEN_A" "?user_id=eq.$UID_B")"

@@ -232,16 +232,19 @@ Konsequenzen, Issue-Referenz.
 
 - **Entscheidung:** Balancing zentral in `domain/progression/` als reine Funktionen/Konstanten.
   EP für L→L+1 = `100 · L`; kumulativ bis Level L = `50 · (L-1) · L` (L2=100, L3=300, L5=1000).
-  Rang-Mindestlevel: E=1, D=5, C=10, B=20, A=35, S=50. Start-Stats je 10, Start-Rang E.
+  Rang-Mindestlevel: E=1, D=5, C=10, B=20, A=35, S=50. Start-Stats **je 0** (Nutzer-Entscheidung
+  2026-07-22: „jeder startet bei 0"; zuvor 10), Start-Rang E.
 - **Alternativen:** Lineare EP-Kurve, exponentielle Kurve (`BASE·q^L`), Rang direkt aus Level ableiten.
 - **Begründung:** Quadratisch wächst spürbar, aber nicht erdrückend, und die Umkehrfunktion ist in
   ganzzahliger Arithmetik exakt lösbar. Der Rang ist bewusst KEIN Level-Derivat, sondern wird ab #10
   über einen Aufstiegstest verdient (Solo-Leveling-Gefühl) — die Schwellen gaten nur die Eignung.
-- **Konsequenzen:** Spielregeln (CLAUDE.md 6/10) → dem Nutzer **zur Bestätigung** vorgelegt (Issue #3).
-  Alle Werte sind Konstanten an einer Stelle und ohne Code-Umbau änderbar. Initiale Charakterwerte
-  liegen als **Migration-Defaults** serverseitig (Server ist Quelle der Wahrheit für Anfangswerte) —
-  bewusst getrennt von den Kurven-Konstanten (Berechnung ≠ Seeding).
-- **Issue:** #3
+- **Konsequenzen:** Spielregeln (CLAUDE.md 6/10) → dem Nutzer vorgelegt (Issue #3). Der Nutzer hat
+  Start-Stats **0** bestätigt; EP-Kurve und Rang-Schwellen bleiben **provisorisch** und werden am Ende
+  gesammelt final abgestimmt (dediziertes Tracking-Issue). Alle Werte sind Konstanten an einer Stelle
+  und ohne Code-Umbau änderbar. Initiale Charakterwerte liegen als **Migration-Defaults** serverseitig
+  (Server ist Quelle der Wahrheit für Anfangswerte) — bewusst getrennt von den Kurven-Konstanten
+  (Berechnung ≠ Seeding).
+- **Issue:** #3 (Feinbalancing: Tracking-Issue #16)
 
 ## 2026-07-21 — `profiles` ist client-read-only (Anti-Cheat)
 

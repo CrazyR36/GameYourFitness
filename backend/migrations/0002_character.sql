@@ -6,15 +6,16 @@
 -- add column IF NOT EXISTS, drop constraint/policy IF EXISTS vor create, revoke/grant.
 
 -- 1) Progression-Spalten -----------------------------------------------------
--- Startwerte (erste Version, Issue #3): Rang E, je 10 Stats, 0 EP → Level 1.
+-- Startwerte (Issue #3, vom Nutzer bestätigt): Rang E, alle Stats 0, 0 EP → Level 1.
+-- Jeder startet „von ganz unten"; Stats wachsen ab #4 durch echtes Training.
 -- Der Signup-Trigger aus 0001 legt die Zeile an; die Defaults liefern die Startwerte.
 alter table public.profiles
     add column if not exists total_xp    bigint  not null default 0,
     add column if not exists rank        text    not null default 'E',
-    add column if not exists strength    integer not null default 10,
-    add column if not exists vitality    integer not null default 10,
-    add column if not exists agility     integer not null default 10,
-    add column if not exists perception  integer not null default 10;
+    add column if not exists strength    integer not null default 0,
+    add column if not exists vitality    integer not null default 0,
+    add column if not exists agility     integer not null default 0,
+    add column if not exists perception  integer not null default 0;
 
 -- 2) Integritaet -------------------------------------------------------------
 alter table public.profiles drop constraint if exists profiles_rank_valid;
