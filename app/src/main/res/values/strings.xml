@@ -1,8 +1,5 @@
 <resources>
     <string name="app_name">GameYourFitness</string>
-    <string name="home_title">GAME YOUR FITNESS</string>
-    <string name="home_subtitle">System bereit.</string>
-    <string name="home_sign_out">Abmelden</string>
 
     <string name="login_title">GAME YOUR FITNESS</string>
     <string name="login_subtitle">Melde dich an, um dein System zu betreten.</string>
@@ -10,4 +7,20 @@
     <string name="login_error_cancelled">Anmeldung abgebrochen. Bitte versuche es erneut.</string>
     <string name="login_error_network">Keine Verbindung zum Server. Prüfe deine Internetverbindung.</string>
     <string name="login_error_generic">Anmeldung fehlgeschlagen. Bitte versuche es erneut.</string>
+
+    <string name="character_title">CHARAKTER</string>
+    <string name="character_sign_out">Abmelden</string>
+    <string name="character_level_label">LEVEL</string>
+    <string name="character_rank_label">RANG</string>
+    <string name="character_stats_label">STATS</string>
+    <string name="character_stat_str">STR</string>
+    <string name="character_stat_vit">VIT</string>
+    <string name="character_stat_agi">AGI</string>
+    <string name="character_stat_per">PER</string>
+    <string name="character_xp_format">%1$d / %2$d EP</string>
+    <string name="character_xp_content_description">EP-Fortschritt: %1$d von %2$d</string>
+    <string name="character_empty">Noch kein Charakter vorhanden.</string>
+    <string name="character_error_network">Keine Verbindung zum Server. Prüfe deine Internetverbindung.</string>
+    <string name="character_error_generic">Charakter konnte nicht geladen werden. Bitte versuche es erneut.</string>
+    <string name="character_retry">Erneut versuchen</string>
 </resources>

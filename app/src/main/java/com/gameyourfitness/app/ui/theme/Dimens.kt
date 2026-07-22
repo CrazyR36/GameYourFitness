@@ -10,4 +10,9 @@ object Dimens {
     val contentSpacing = 16.dp
     val inlineProgressSize = 20.dp
     val progressStroke = 2.dp
+
+    // Charakterbildschirm (#3)
+    val xpBarHeight = 14.dp
+    val statSpacing = 12.dp
+    val sectionSpacing = 20.dp
 }
