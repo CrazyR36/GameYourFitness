@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # RLS-Negativtest fuer public.profiles (Definition of Done, CLAUDE.md Abschnitt 2/8).
-# Beweist mit ZWEI echten GoTrue-Nutzern ueber PostgREST, dass ein fremder Nutzer
-# die Daten eines anderen weder lesen noch schreiben kann und dass Client-Insert/
-# -Delete generell verboten sind.
+# Beweist mit ZWEI echten GoTrue-Nutzern ueber PostgREST, dass ein fremder Nutzer die
+# Daten eines anderen weder lesen noch schreiben kann, dass Client-Insert/-Delete
+# generell verboten sind und — seit Slice #3 — dass die Progression-Spalten
+# (total_xp/rank/Stats) NICHT client-schreibbar sind (Anti-Cheat).
 #
 # Voraussetzung: Stack laeuft und ist migriert. Nutzung aus dem Repo-Root:
 #   backend/scripts/test-rls.sh
@@ -55,13 +56,18 @@ status() {
         -H "apikey: $ANON_KEY" "$@"
 }
 
-# 1) A sieht genau die eigene Zeile (vom Signup-Trigger angelegt).
-rows="$(auth_get "$TOKEN_A" "?select=user_id")"
+# 1) A sieht genau die eigene Zeile inkl. der neuen Charakter-Spalten mit Startwerten.
+rows="$(auth_get "$TOKEN_A" "?select=user_id,total_xp,rank,strength,vitality,agility,perception")"
 count="$(echo "$rows" | array_len)"
 [ "$count" = "1" ] || fail "A sollte genau 1 Profil sehen, sah '$count': $rows"
 seen="$(echo "$rows" | jq -r '.[0].user_id')"
 [ "$seen" = "$UID_A" ] || fail "A sieht fremdes Profil ($seen statt $UID_A)"
-pass "A sieht ausschliesslich die eigene Profilzeile"
+xp="$(echo "$rows" | jq -r '.[0].total_xp')"
+rank="$(echo "$rows" | jq -r '.[0].rank')"
+str="$(echo "$rows" | jq -r '.[0].strength')"
+[ "$xp" = "0" ] && [ "$rank" = "E" ] && [ "$str" = "10" ] ||
+    fail "Startwerte falsch (total_xp=$xp rank=$rank strength=$str, erwartet 0/E/10)"
+pass "A sieht ausschliesslich die eigene Zeile mit Startwerten (0 EP, Rang E, Stats 10)"
 
 # 2) A kann die Zeile von B nicht lesen (gezielter Filter → leer).
 rows="$(auth_get "$TOKEN_A" "?user_id=eq.$UID_B")"
@@ -69,15 +75,16 @@ count="$(echo "$rows" | array_len)"
 [ "$count" = "0" ] || fail "A konnte B's Zeile lesen: $rows"
 pass "A kann B's Profil nicht lesen (RLS-select blockiert)"
 
-# 3) A kann B's Zeile nicht aendern: PATCH auf eine echte Spalte, RLS filtert die
-#    Zeile weg → 0 betroffene Zeilen (Return=representation liefert leeres Array).
-resp="$(curl -s -X PATCH "$BASE_URL/rest/v1/profiles?user_id=eq.$UID_B" \
-    -H "apikey: $ANON_KEY" -H "Authorization: Bearer $TOKEN_A" \
-    -H "Content-Type: application/json" -H "Prefer: return=representation" \
-    -d '{"created_at":"2020-01-01T00:00:00+00:00"}')"
-count="$(echo "$resp" | array_len)"
-[ "$count" = "0" ] || fail "A konnte B's Zeile aendern (erwartet 0 Zeilen): $resp"
-pass "A kann B's Profil nicht aendern (RLS-update blockiert)"
+# 3) Anti-Cheat: Client-UPDATE ist generell verboten (update-Grant in #3 entzogen).
+#    Schon ein Selbst-PATCH auf total_xp wird abgelehnt — damit erst recht auf fremde
+#    Zeilen. So kann kein Nutzer seine EP/Stats/Rang manipulieren.
+code="$(status PATCH "$BASE_URL/rest/v1/profiles?user_id=eq.$UID_A" \
+    -H "Authorization: Bearer $TOKEN_A" -H "Content-Type: application/json" \
+    -d '{"total_xp":999999}')"
+case "$code" in
+    401 | 403) pass "Client-UPDATE der eigenen Progression ist verboten (HTTP $code)" ;;
+    *) fail "Client-UPDATE nicht verboten (HTTP $code) — total_xp waere manipulierbar" ;;
+esac
 
 # 4) Client-INSERT ist verboten (keine insert-Policy + Grant zurueckgenommen).
 code="$(status POST "$BASE_URL/rest/v1/profiles" \

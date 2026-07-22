@@ -68,15 +68,15 @@ class LoginE2ETest {
     }
 
     @Test
-    fun test_userCanSignInWithGoogleAndSeesHomeScreen() {
+    fun test_userCanSignInWithGoogleAndSeesCharacterScreen() {
         launchApp()
         waitForTag("login_screen")
 
         composeRule.onNodeWithTag("login_google_button").performClick()
 
-        waitForTag("home_screen")
-        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("home_logout_button").assertIsDisplayed()
+        waitForTag("character_screen")
+        composeRule.onNodeWithTag("character_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("character_sign_out").assertIsDisplayed()
     }
 
     @Test
@@ -107,17 +107,17 @@ class LoginE2ETest {
 
         launchApp()
 
-        waitForTag("home_screen")
-        composeRule.onNodeWithTag("home_screen").assertIsDisplayed()
+        waitForTag("character_screen")
+        composeRule.onNodeWithTag("character_screen").assertIsDisplayed()
     }
 
     @Test
     fun test_userCanSignOutAndReturnsToLogin() {
         runBlocking { sessionStore.save(goTrueTestBackend.obtainRealSession()) }
         launchApp()
-        waitForTag("home_screen")
+        waitForTag("character_screen")
 
-        composeRule.onNodeWithTag("home_logout_button").performClick()
+        composeRule.onNodeWithTag("character_sign_out").performClick()
 
         waitForTag("login_screen")
         composeRule.onNodeWithTag("login_google_button").assertIsDisplayed()
