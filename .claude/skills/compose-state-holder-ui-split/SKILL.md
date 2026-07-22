@@ -1,29 +1,30 @@
 ---
 name: compose-state-holder-ui-split
-description: Use when a Jetpack Compose screen-level composable takes a ViewModel/component/controller, collects state or effects, handles navigation/snackbars, or wires callbacks while also rendering layout.
+description: "Nutze diesen Skill, wenn ein Jetpack-Compose-Composable auf Screen-Ebene ein ViewModel/Component/Controller entgegennimmt, State oder Effects sammelt, Navigation/Snackbars behandelt oder Callbacks verdrahtet und dabei zugleich Layout rendert."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose: state holder/UI split
+# Compose: State-Holder-/UI-Trennung
 
-## Core principle
+## Grundprinzip
 
-Separate state-holder wiring from UI rendering. The state-holder composable talks to ViewModels, components, flows, navigation, and side effects. The UI composable takes plain immutable UI state plus callbacks and describes layout.
+Trenne State-Holder-Verdrahtung vom UI-Rendering. Das State-Holder-Composable spricht mit ViewModels, Components, Flows, Navigation und Side Effects. Das UI-Composable nimmt schlichten, unveränderlichen UI-State plus Callbacks und beschreibt Layout.
 
-This keeps screens previewable, testable, and easier to reuse across Android, Desktop, TV, and KMP/CMP targets.
+Das hält Screens previewbar, testbar und leichter über Android-, Desktop-, TV- und KMP/CMP-Targets wiederverwendbar.
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-Use this when a Compose screen:
+Nutze ihn, wenn ein Compose-Screen:
 
-- Takes a ViewModel, component, controller, navigator, repository, or service directly.
-- Collects app/business state or side effects in the same function that lays out most UI.
-- Passes a whole state holder into child composables instead of explicit state and callbacks.
-- Is hard to preview because it needs dependency injection, navigation, lifecycle, or fake services.
-- Has UI tests that must construct a full app stack to verify a simple layout branch.
+- ein ViewModel, Component, Controller, Navigator, Repository oder Service direkt entgegennimmt.
+- App-/Business-State oder Side Effects in derselben Funktion sammelt, die den Großteil der UI layoutet.
+- einen ganzen State-Holder in Kind-Composables reicht statt expliziten State und Callbacks.
+- schwer previewbar ist, weil er Dependency Injection, Navigation, Lifecycle oder Fake-Services braucht.
+- UI-Tests hat, die einen vollen App-Stack aufbauen müssen, um einen einfachen Layout-Zweig zu prüfen.
 
-## The pattern
+## Das Muster
 
-Use a small public state-holder composable:
+Nutze ein kleines, öffentliches State-Holder-Composable:
 
 ```kotlin
 @Composable
@@ -40,7 +41,7 @@ fun ProfileScreen(component: ProfileComponent, modifier: Modifier = Modifier) {
 }
 ```
 
-Then put UI in a plain composable that knows nothing about the state holder:
+Lege die UI dann in ein schlichtes Composable, das nichts vom State-Holder weiß:
 
 ```kotlin
 @Composable
@@ -63,7 +64,7 @@ fun ProfileScreen(
 }
 ```
 
-Private content functions can break up layout:
+Private Content-Funktionen können das Layout aufteilen:
 
 ```kotlin
 @Composable
@@ -76,42 +77,42 @@ private fun ProfileContent(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Layout only.
+    // Nur Layout.
 }
 ```
 
-## Rules of thumb
+## Faustregeln
 
-| Concern | State-holder composable | UI composable |
+| Belang | State-Holder-Composable | UI-Composable |
 |---|---|---|
-| Collect ViewModel/component state | Yes | No |
-| Collect one-shot effects | Yes, or a tiny sibling effect handler | Usually no |
-| Hold dependency-injected objects | Yes | No |
-| Accept immutable UI state | Usually passes it through | Yes |
-| Accept lambdas for user events | Wires them | Calls them |
-| Own layout, modifiers, semantics, test tags | No/minimal | Yes |
-| Own UI-local state like scroll, focus, text input, animation, interaction | Sometimes seeds it | Yes |
-| Preview/screenshot friendly | Not necessarily | Yes |
+| ViewModel-/Component-State sammeln | Ja | Nein |
+| Einmalige Effects sammeln | Ja, oder ein winziger Geschwister-Effect-Handler | Meist nein |
+| Dependency-injizierte Objekte halten | Ja | Nein |
+| Unveränderlichen UI-State entgegennehmen | Reicht ihn meist durch | Ja |
+| Lambdas für Nutzer-Events entgegennehmen | Verdrahtet sie | Ruft sie auf |
+| Layout, Modifier, Semantics, Test-Tags besitzen | Nein/minimal | Ja |
+| UI-lokalen State wie Scroll, Fokus, Texteingabe, Animation, Interaktion besitzen | Sät ihn manchmal | Ja |
+| Preview-/Screenshot-freundlich | Nicht unbedingt | Ja |
 
-The "no collection in UI composables" rule is about app/business state and side-effect streams. Plain UI composables can still own UI-local framework state: `rememberScrollState`, `rememberLazyListState`, `FocusRequester`, focus state, animation state, `TextFieldState`, `MutableInteractionSource.collectIsPressedAsState()`, and similar behavior that belongs to the rendered widget.
+Die Regel „keine Collection in UI-Composables" betrifft App-/Business-State und Side-Effect-Streams. Schlichte UI-Composables dürfen weiterhin UI-lokalen Framework-State besitzen: `rememberScrollState`, `rememberLazyListState`, `FocusRequester`, Fokus-State, Animations-State, `TextFieldState`, `MutableInteractionSource.collectIsPressedAsState()` und ähnliches Verhalten, das zum gerenderten Widget gehört.
 
-If that UI-local state grows into coordinated behavior with multiple related fields and operations, use [`compose-state-hoisting`](../compose-state-hoisting/SKILL.md) to decide whether it should become a plain state holder class remembered in composition.
+Wächst dieser UI-lokale State zu koordiniertem Verhalten mit mehreren zusammengehörigen Feldern und Operationen, nutze [`compose-state-hoisting`](../compose-state-hoisting/SKILL.md), um zu entscheiden, ob daraus eine einfache, in der Composition gerememberte State-Holder-Klasse werden soll.
 
-## What to pass
+## Was übergeben
 
-Pass the smallest useful UI contract:
+Übergib den kleinsten nützlichen UI-Contract:
 
-- Prefer a dedicated `UiState`/`State` object over many unrelated primitives when the screen has real state.
-- Prefer explicit lambdas (`onRetryClick`, `onItemSelected`) over passing a whole component.
-- Keep domain models out of the UI composable if they force business rules into UI. Map to UI models when the UI needs a different shape.
-- Keep navigation as callbacks. The UI composable says "user clicked back", not "navigate to route X".
-- Frame-rate or UI-local values that should not force whole-tree recomposition when they change: prefer provider lambdas and deferred reads per [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
+- Bevorzuge ein dediziertes `UiState`/`State`-Objekt gegenüber vielen unverbundenen Primitiven, wenn der Screen echten State hat.
+- Bevorzuge explizite Lambdas (`onRetryClick`, `onItemSelected`) gegenüber der Übergabe eines ganzen Components.
+- Halte Domänenmodelle aus dem UI-Composable, wenn sie Business-Regeln in die UI zwingen. Mappe auf UI-Modelle, wenn die UI eine andere Form braucht.
+- Halte Navigation als Callbacks. Das UI-Composable sagt „Nutzer hat Zurück geklickt", nicht „navigiere zu Route X".
+- Frame-rate- oder UI-lokale Werte, die bei Änderung keine Recomposition des ganzen Baums erzwingen sollen: bevorzuge Provider-Lambdas und Deferred Reads gemäß [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
 
-## Side effects
+## Side Effects
 
-[`compose-side-effects`](../compose-side-effects/SKILL.md) covers effect APIs (`LaunchedEffect`, `DisposableEffect`, `SideEffect`), keys, cleanup, and `rememberUpdatedState`.
+[`compose-side-effects`](../compose-side-effects/SKILL.md) deckt Effect-APIs (`LaunchedEffect`, `DisposableEffect`, `SideEffect`), Keys, Cleanup und `rememberUpdatedState` ab.
 
-Handle effects near the state holder, where the effect source and imperative target are both available:
+Behandle Effects nahe am State-Holder, wo Effect-Quelle und imperatives Ziel beide verfügbar sind:
 
 ```kotlin
 @Composable
@@ -130,27 +131,27 @@ fun ProfileScreen(component: ProfileComponent, snackbarHostState: SnackbarHostSt
 }
 ```
 
-If effect handling grows, extract `ProfileEffects(component, snackbarHostState)` rather than pushing the component into the UI composable.
+Wächst die Effect-Behandlung, extrahiere `ProfileEffects(component, snackbarHostState)`, statt das Component ins UI-Composable zu schieben.
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Why it hurts | Fix |
+| Fehler | Warum es schadet | Fix |
 |---|---|---|
-| `fun Screen(viewModel: MyViewModel)` contains all layout | Hard to preview/test without Android lifecycle and DI | Add a plain UI overload that takes `state` and callbacks |
-| Child composables take `component` | Dependencies leak through the tree | Pass only the state/callbacks that child needs |
-| UI composable launches navigation | UI becomes coupled to app routing | Expose `onBackClick`, `onItemClick`, etc. |
-| UI composable collects app/business flows | Collection lifecycle is hidden in layout | Collect near the state holder and pass values down |
-| UI-local state is hoisted into the state holder for no reason | State holder starts owning layout mechanics | Keep scroll/focus/animation/text-field interaction state in the UI composable when it is only UI behavior |
-| Every tiny composable gets a state-holder overload | Too much ceremony | Split at screen/section boundaries, not every `Row` |
+| `fun Screen(viewModel: MyViewModel)` enthält das ganze Layout | Schwer preview-/testbar ohne Android-Lifecycle und DI | Ein schlichtes UI-Overload hinzufügen, das `state` und Callbacks nimmt |
+| Kind-Composables nehmen `component` | Abhängigkeiten leaken durch den Baum | Nur den State/die Callbacks reichen, die das Kind braucht |
+| UI-Composable startet Navigation | UI wird an das App-Routing gekoppelt | `onBackClick`, `onItemClick` usw. exponieren |
+| UI-Composable sammelt App-/Business-Flows | Collection-Lifecycle versteckt sich im Layout | Nahe am State-Holder sammeln und Werte nach unten reichen |
+| UI-lokaler State wird ohne Grund in den State-Holder hochgezogen | State-Holder beginnt, Layout-Mechanik zu besitzen | Scroll-/Fokus-/Animations-/Textfeld-Interaktions-State im UI-Composable halten, wenn es nur UI-Verhalten ist |
+| Jedes winzige Composable bekommt ein State-Holder-Overload | Zu viel Zeremonie | An Screen-/Section-Grenzen aufteilen, nicht an jeder `Row` |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- Tiny one-off composables that already take plain values and callbacks.
-- Design-system primitives such as `Button`, `Card`, or `ListItem`; those should expose slots and modifiers, not state holders.
-- Cases where the state-holder composable would only forward one primitive and add no isolation.
+- Winzige Einweg-Composables, die schon schlichte Werte und Callbacks nehmen.
+- Design-System-Primitive wie `Button`, `Card` oder `ListItem`; die sollen Slots und Modifier exponieren, keine State-Holder.
+- Fälle, in denen das State-Holder-Composable nur ein Primitive weiterreichen und keine Isolation bringen würde.
 
-## Related
+## Verwandt
 
-- [`compose-ui-testing-patterns`](../compose-ui-testing-patterns/SKILL.md) — testing plain state-driven UI composables without the full app graph.
-- [`compose-state-hoisting`](../compose-state-hoisting/SKILL.md) — deciding where UI element state and UI logic should live, including plain state holder classes.
-- [`kotlin-multiplatform-expect-actual`](../kotlin-multiplatform-expect-actual/SKILL.md) — platform services, native views, and expect/interface boundaries when shared UI meets platform-specific leaves.
+- [`compose-ui-testing-patterns`](../compose-ui-testing-patterns/SKILL.md) — schlichte, state-getriebene UI-Composables ohne den vollen App-Graphen testen.
+- [`compose-state-hoisting`](../compose-state-hoisting/SKILL.md) — entscheiden, wo UI-Element-State und UI-Logik leben sollen, inklusive einfacher State-Holder-Klassen.
+- [`kotlin-multiplatform-expect-actual`](../kotlin-multiplatform-expect-actual/SKILL.md) — Plattform-Services, native Views und expect/Interface-Grenzen, wenn geteilte UI auf plattformspezifische Leaves trifft.

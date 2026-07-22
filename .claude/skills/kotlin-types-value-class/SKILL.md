@@ -1,83 +1,84 @@
 ---
 name: kotlin-types-value-class
-description: Use when writing or reviewing Kotlin type declarations to choose @JvmInline value class over data class where appropriate, including Compose stability implications.
+description: "Nutze diesen Skill beim Schreiben oder Review von Kotlin-Typdeklarationen, um @JvmInline value class gegenüber data class dort zu wählen, wo es passt — inklusive der Auswirkungen auf die Compose-Stabilität."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Kotlin value class vs data class
+# Kotlin: value class vs. data class
 
-## Core principle
+## Grundprinzip
 
-Prefer `@JvmInline value class` for single-field types that carry domain meaning. Data classes are for aggregating multiple fields.
+Bevorzuge `@JvmInline value class` für einfeldrige Typen mit Domänenbedeutung. Data-Klassen dienen der Aggregation mehrerer Felder.
 
-## Review procedure
+## Review-Vorgehen
 
-1. Find single-property wrappers, primitive-heavy APIs, and `@Immutable` wrappers in UI state.
-2. Decide whether the single value is a real domain distinction. If not, keep the primitive or use a typealias.
-3. Check whether replacing the type changes equality, serialization, Java interop, or hot-path boxing.
-4. Convert only when the domain meaning is clear and the contract changes are acceptable.
-5. Re-run the affected compiler/tests; for Compose performance work, re-check compiler reports or recomposition evidence.
+1. Finde einfeldrige Wrapper, primitivlastige APIs und `@Immutable`-Wrapper im UI-State.
+2. Entscheide, ob der einzelne Wert eine echte Domänen-Unterscheidung ist. Wenn nicht, behalte das Primitive oder nutze einen typealias.
+3. Prüfe, ob der Typ-Ersatz Gleichheit, Serialisierung, Java-Interop oder Boxing auf dem Hot Path ändert.
+4. Konvertiere nur, wenn die Domänenbedeutung klar und die Vertragsänderungen akzeptabel sind.
+5. Führe die betroffenen Compiler/Tests erneut aus; bei Compose-Performance-Arbeit Compiler-Reports oder Recomposition-Evidenz erneut prüfen.
 
-## Decision flow
+## Entscheidungsfluss
 
-| Situation | Prefer |
+| Situation | Bevorzuge |
 |---|---|
-| Single field + domain-meaningful (`UserId`, `EmailAddress`, `Percentage`) | `@JvmInline value class` |
-| Single field + no domain meaning (just grouping) | Type alias or keep the primitive |
-| Multiple fields | Data class |
-| Needs custom `equals`/`hashCode` beyond the wrapped value | Data class (value classes delegate to the underlying type) |
-| Used as a generic type argument or nullable in a proven hot path | Data class or primitive |
+| Einzelfeld + domänenrelevant (`UserId`, `EmailAddress`, `Percentage`) | `@JvmInline value class` |
+| Einzelfeld + keine Domänenbedeutung (nur Gruppierung) | Typealias oder Primitive behalten |
+| Mehrere Felder | Data class |
+| Braucht eigenes `equals`/`hashCode` über den gewrappten Wert hinaus | Data class (value classes delegieren an den zugrunde liegenden Typ) |
+| Als generisches Typargument oder nullable auf nachgewiesenem Hot Path | Data class oder Primitive |
 
 ```kotlin
-// GOOD: domain-meaningful single field
+// GUT: domänenrelevantes Einzelfeld
 @JvmInline value class UserId(val value: String)
 @JvmInline value class EmailAddress(val value: String)
 @JvmInline value class Percentage(val value: Float)
 
-// BAD: data class wrapping a single domain field
+// SCHLECHT: data class, die ein einzelnes Domänenfeld wrappt
 data class UserId(val value: String)
 
-// BAD: value class with no domain meaning
-@JvmInline value class Wrapper(val value: String) // just use the String, or a type alias
+// SCHLECHT: value class ohne Domänenbedeutung
+@JvmInline value class Wrapper(val value: String) // nimm einfach den String oder einen typealias
 
-// BAD: value class needing custom equality
+// SCHLECHT: value class, die eigene Gleichheit braucht
 @JvmInline value class CaseInsensitiveString(val value: String)
-// value class equals delegates to String equals, which IS case-sensitive
-// Use a data class if you need different equality semantics
+// value-class-equals delegiert an String-equals, das case-sensitive IST
+// Nutze eine data class, wenn du andere Gleichheitssemantik brauchst
 ```
 
-## Compose stability procedure
+## Vorgehen bei Compose-Stabilität
 
-When a Compose report points at a single-field wrapper:
+Wenn ein Compose-Report auf einen einfeldrigen Wrapper zeigt:
 
-1. Confirm the underlying type is stable (`String`, primitives, or another stable type).
-2. Prefer a value class over `@Immutable` on a wrapper whose only job is type distinction.
-3. Do not change public serialization/API contracts just to silence a report.
+1. Bestätige, dass der zugrunde liegende Typ stabil ist (`String`, Primitive oder ein anderer stabiler Typ).
+2. Bevorzuge eine value class gegenüber `@Immutable` auf einem Wrapper, dessen einzige Aufgabe die Typ-Unterscheidung ist.
+3. Ändere keine öffentlichen Serialisierungs-/API-Verträge nur, um einen Report stummzuschalten.
 
 ```kotlin
-// Before: primitive value can be mixed up with other strings
+// Vorher: primitiver Wert kann mit anderen Strings verwechselt werden
 data class UiState(val userId: String)
 
-// After: domain type is stable at the Compose boundary
+// Nachher: Domänentyp ist an der Compose-Grenze stabil
 @JvmInline value class UserId(val value: String)
 data class UiState(val userId: UserId)
 ```
 
-## Refactor checks
+## Refactoring-Prüfungen
 
-Before replacing an existing wrapper, check the contract that callers observe:
+Bevor du einen bestehenden Wrapper ersetzt, prüfe den Vertrag, den Aufrufer beobachten:
 
-| Check | Action |
+| Prüfung | Aktion |
 |---|---|
-| JSON/API format matters | Verify serialization. `@Serializable data class A(val value: String)` encodes as an object; a value class encodes as the wrapped value. |
-| Custom equality or hashing is required | Keep a data class. Value-class equality follows the wrapped value. |
-| Callers use `copy()` or destructuring | Keep a data class or update callers deliberately. Value classes do not provide data-class conveniences. |
-| Java or reflection-heavy framework boundary | Verify interop. Java callers see the underlying type; generic/`Any` use boxes. |
-| Nullable/generic/vararg hot path | Measure before converting; those uses box. |
-| Constructor body, `lateinit`, delegated properties, backing fields | Keep a data class or redesign; value classes only store the constructor value. |
+| JSON-/API-Format ist relevant | Serialisierung verifizieren. `@Serializable data class A(val value: String)` kodiert als Objekt; eine value class kodiert als der gewrappte Wert. |
+| Eigene Gleichheit oder Hashing nötig | Data class behalten. Value-class-Gleichheit folgt dem gewrappten Wert. |
+| Aufrufer nutzen `copy()` oder Destrukturierung | Data class behalten oder Aufrufer bewusst anpassen. Value classes bieten keine Data-class-Annehmlichkeiten. |
+| Java- oder reflection-lastige Framework-Grenze | Interop verifizieren. Java-Aufrufer sehen den zugrunde liegenden Typ; generische/`Any`-Nutzung boxt. |
+| Nullable/generischer/vararg Hot Path | Vor der Konvertierung messen; diese Nutzungen boxen. |
+| Konstruktor-Body, `lateinit`, delegierte Properties, Backing Fields | Data class behalten oder neu entwerfen; value classes speichern nur den Konstruktorwert. |
 
-## Packing multiple values only after evidence
+## Mehrere Werte packen — erst nach Evidenz
 
-Do not replace a clear multi-field data class with bit-packing unless profiling shows allocation cost on a hot path. If needed, Compose provides `packFloats`, `packInts`, and matching `unpack*` functions in `androidx.compose.ui.util`:
+Ersetze eine klare mehrfeldrige data class nicht durch Bit-Packing, außer Profiling zeigt Allokationskosten auf einem Hot Path. Falls nötig, bietet Compose `packFloats`, `packInts` und passende `unpack*`-Funktionen in `androidx.compose.ui.util`:
 
 ```kotlin
 @JvmInline value class Offset(val packedValue: Long)
@@ -87,32 +88,31 @@ val Offset.x: Float get() = unpackFloat1(packedValue)
 val Offset.y: Float get() = unpackFloat2(packedValue)
 ```
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| Data class wrapping a single domain field | Replace with `@JvmInline value class` |
-| Value class with no domain meaning (just a wrapper) | Use a type alias or the primitive directly |
-| Value class needing custom equality | Use a data class instead |
-| Value class as generic type argument in a hot path | Measure boxing cost; keep the primitive/data class if it matters |
-| `@Immutable` annotation on a type that could be a value class | Replace with a value class when the underlying type is stable |
-| Forgetting `@JvmInline` annotation | Always pair `value class` with `@JvmInline` for single-field classes |
+| Data class, die ein einzelnes Domänenfeld wrappt | Durch `@JvmInline value class` ersetzen |
+| Value class ohne Domänenbedeutung (nur Wrapper) | Typealias oder Primitive direkt nutzen |
+| Value class, die eigene Gleichheit braucht | Stattdessen eine data class nutzen |
+| Value class als generisches Typargument auf einem Hot Path | Boxing-Kosten messen; Primitive/data class behalten, wenn relevant |
+| `@Immutable`-Annotation auf einem Typ, der eine value class sein könnte | Durch value class ersetzen, wenn der zugrunde liegende Typ stabil ist |
+| Vergessene `@JvmInline`-Annotation | `value class` bei Einzelfeld immer mit `@JvmInline` paaren |
 
-## Red flags during review
+## Warnzeichen im Review
 
-- A data class with exactly one property
-- A `String`, `Long`, or `Int` used where different values should not be interchangeable (e.g., `fun transfer(from: String, to: String, amount: Long)`)
-- An `@Immutable` annotation on a single-field wrapper
-- A type alias used for domain distinction where value-class semantics are needed (type aliases are type-erased, no runtime protection)
+- Eine data class mit genau einer Property
+- Ein `String`, `Long` oder `Int` dort, wo verschiedene Werte nicht austauschbar sein sollten (z. B. `fun transfer(from: String, to: String, amount: Long)`)
+- Eine `@Immutable`-Annotation auf einem einfeldrigen Wrapper
+- Ein typealias zur Domänen-Unterscheidung, wo value-class-Semantik nötig ist (Typealiases sind typ-erased, kein Laufzeitschutz)
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- The type needs multiple fields → data class
-- The type needs custom `equals`/`hashCode` → data class
-- The type is used heavily as a nullable or generic in performance-critical code → measure autoboxing cost first
-- The project does not need the type-safety distinction → a type alias or primitive is sufficient
-- The replacement would silently change JSON, Java, reflection, or framework behavior
+- Der Typ braucht mehrere Felder → data class
+- Der Typ braucht eigenes `equals`/`hashCode` → data class
+- Der Typ wird stark als nullable oder generisch in performancekritischem Code genutzt → zuerst Autoboxing-Kosten messen
+- Der Ersatz würde JSON-, Java-, Reflection- oder Framework-Verhalten still ändern
 
-## Related
+## Verwandt
 
-- [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) — diagnose unstable Compose parameters; value classes are one fix
+- [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) — instabile Compose-Parameter diagnostizieren; value classes sind ein Fix

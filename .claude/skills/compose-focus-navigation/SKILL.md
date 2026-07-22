@@ -1,36 +1,37 @@
 ---
 name: compose-focus-navigation
-description: Use when writing or reviewing Jetpack Compose UI for TV, keyboard, desktop, accessibility focus, D-pad navigation, FocusRequester, focusProperties, key events, or initial focus behavior.
+description: "Nutze diesen Skill beim Schreiben oder Review von Jetpack-Compose-UI für TV, Tastatur, Desktop, Accessibility-Fokus, D-Pad-Navigation, FocusRequester, focusProperties, Key-Events oder initiales Fokusverhalten."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose: focus navigation
+# Compose: Fokus-Navigation
 
-## Core principle
+## Grundprinzip
 
-Focus is stateful UI behavior. Make focus targets explicit, request focus after composition succeeds, and test navigation with the same input model users use: keyboard, D-pad, or remote keys.
+Fokus ist zustandsbehaftetes UI-Verhalten. Mache Fokusziele explizit, fordere Fokus erst nach erfolgreicher Composition an und teste Navigation mit demselben Eingabemodell, das Nutzer verwenden: Tastatur, D-Pad oder Fernbedienungstasten.
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-Use this when UI:
+Nutze ihn, wenn UI:
 
-- Runs on TV, desktop, ChromeOS, keyboard-first Android, or remote-control devices.
-- Uses `FocusRequester`, `focusRequester`, `focusProperties`, `onFocusChanged`, or key handlers.
-- Needs initial focus, restored focus, directional navigation, or back/escape behavior.
-- Has a carousel, grid, lazy list, menu, dialog, or modal with focus traps.
-- Has tests asserting which item is focused.
+- auf TV, Desktop, ChromeOS, tastaturzentriertem Android oder Fernbedienungsgeräten läuft.
+- `FocusRequester`, `focusRequester`, `focusProperties`, `onFocusChanged` oder Key-Handler nutzt.
+- initialen Fokus, wiederhergestellten Fokus, gerichtete Navigation oder Back-/Escape-Verhalten braucht.
+- ein Carousel, Grid, eine Lazy List, ein Menü, einen Dialog oder ein Modal mit Fokus-Traps hat.
+- Tests hat, die prüfen, welches Item fokussiert ist.
 
-## Build focus targets deliberately
+## Fokusziele bewusst aufbauen
 
-Start with components that already participate in focus, then add only the focus hooks the behavior needs:
+Beginne mit Komponenten, die schon am Fokus teilnehmen, und füge nur die Fokus-Hooks hinzu, die das Verhalten braucht:
 
-| Need | Add |
+| Bedarf | Hinzufügen |
 |---|---|
-| Normal button/text field/clickable focus | Nothing extra; use the focusable component |
-| Programmatic initial/restored focus | `FocusRequester` + `Modifier.focusRequester(...)` |
-| Visual or state reaction to focus changes | `Modifier.onFocusChanged { ... }` |
-| Custom interactive surface that is not already focusable | `Modifier.focusable()` plus role/semantics as appropriate |
+| Normaler Button-/Textfeld-/Clickable-Fokus | Nichts extra; die fokussierbare Komponente nutzen |
+| Programmatischer initialer/wiederhergestellter Fokus | `FocusRequester` + `Modifier.focusRequester(...)` |
+| Visuelle oder State-Reaktion auf Fokusänderungen | `Modifier.onFocusChanged { ... }` |
+| Eigene interaktive Fläche, die noch nicht fokussierbar ist | `Modifier.focusable()` plus Role/Semantics nach Bedarf |
 
-For example, request and observe focus only when both behaviors are needed:
+Fordere und beobachte Fokus zum Beispiel nur, wenn beide Verhalten nötig sind:
 
 ```kotlin
 val requester = remember { FocusRequester() }
@@ -45,11 +46,11 @@ Button(
 }
 ```
 
-Prefer focusable components (`Button`, `TextField`, clickable/selectable surfaces) over manually adding `focusable()` to passive layout. Add manual focus only when the element is truly interactive or participates in navigation.
+Bevorzuge fokussierbare Komponenten (`Button`, `TextField`, clickable/selectable Flächen) gegenüber manuell hinzugefügtem `focusable()` auf passivem Layout. Füge manuellen Fokus nur hinzu, wenn das Element wirklich interaktiv ist oder an der Navigation teilnimmt.
 
-## Request focus after composition
+## Fokus nach der Composition anfordern
 
-Call focus requests from an effect, not from the composable body:
+Rufe Fokus-Anforderungen aus einem Effect auf, nicht aus dem Composable-Body:
 
 ```kotlin
 val initialFocus = remember { FocusRequester() }
@@ -59,7 +60,7 @@ LaunchedEffect(initialFocus) {
 }
 ```
 
-If the target appears after loading, key the request to the condition:
+Erscheint das Ziel nach dem Laden, keye die Anforderung auf die Bedingung:
 
 ```kotlin
 LaunchedEffect(items.isNotEmpty()) {
@@ -69,11 +70,11 @@ LaunchedEffect(items.isNotEmpty()) {
 }
 ```
 
-For lazy content, request focus only after the item is actually composed. Keep requesters in stable item state keyed by item id, not by index alone if the list can reorder.
+Fordere bei Lazy-Content Fokus erst an, nachdem das Item tatsächlich komponiert ist. Halte Requester in stabilem Item-State, gekeyt per Item-Id — nicht allein per Index, wenn die Liste umsortieren kann.
 
-## Directional navigation
+## Gerichtete Navigation
 
-Use `focusProperties` when default spatial search is wrong:
+Nutze `focusProperties`, wenn die Standard-Raumsuche falsch ist:
 
 ```kotlin
 Modifier.focusProperties {
@@ -83,11 +84,11 @@ Modifier.focusProperties {
 }
 ```
 
-Use this sparingly. Too many hard-coded links create stale focus graphs when layouts change. Prefer natural focus order unless the design requires a specific jump or trap.
+Nutze das sparsam. Zu viele hartkodierte Verknüpfungen erzeugen veraltete Fokusgraphen, wenn sich Layouts ändern. Bevorzuge die natürliche Fokusreihenfolge, außer das Design verlangt einen bestimmten Sprung oder Trap.
 
-## Key events
+## Key-Events
 
-Use key handlers for behavior that is not normal click/focus traversal:
+Nutze Key-Handler für Verhalten, das keine normale Click-/Fokus-Traversierung ist:
 
 ```kotlin
 Modifier.onPreviewKeyEvent { event ->
@@ -100,34 +101,34 @@ Modifier.onPreviewKeyEvent { event ->
 }
 ```
 
-Return `true` only when consumed. Returning `true` too broadly breaks text entry, accessibility shortcuts, and parent navigation.
+Gib nur `true` zurück, wenn konsumiert. Zu breites `true` bricht Texteingabe, Accessibility-Shortcuts und Eltern-Navigation.
 
-For rapid D-pad input, throttle at the boundary that owns the expensive behavior (for example row scrolling or paging), not globally across the whole screen.
+Drossle bei schneller D-Pad-Eingabe an der Grenze, die das teure Verhalten besitzt (z. B. Zeilen-Scroll oder Paging), nicht global über den ganzen Screen.
 
-## Focus restoration
+## Fokus-Wiederherstellung
 
-Preserve focus by semantic identity:
+Erhalte Fokus über semantische Identität:
 
-- Track selected/focused item id, not just index.
-- Use stable `key` values in lazy lists and grids.
-- When content refreshes, re-request focus for the same id if it still exists.
-- If it no longer exists, choose a deterministic fallback: nearest neighbor, first item, or parent container.
+- Verfolge die ausgewählte/fokussierte Item-Id, nicht nur den Index.
+- Nutze stabile `key`-Werte in Lazy Lists und Grids.
+- Wenn Content neu lädt, fordere Fokus für dieselbe Id erneut an, falls sie noch existiert.
+- Existiert sie nicht mehr, wähle einen deterministischen Fallback: nächster Nachbar, erstes Item oder Eltern-Container.
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| Adding `focusRequester` and `onFocusChanged` to every button | Add them only when requesting or observing focus |
-| `requestFocus()` in the composable body | Move to `LaunchedEffect` |
-| Initial focus keyed to `Unit` while target appears later | Key to loaded/visible condition |
-| Focus requesters stored by lazy list index | Store by stable item id |
-| Everything gets custom `focusProperties` | Let spatial search work; override only broken edges |
-| Key handler returns `true` for all keys | Consume only handled keys |
-| Tests click nodes in TV/D-pad UI | Send key input and assert focus |
+| `focusRequester` und `onFocusChanged` an jeden Button hängen | Nur hinzufügen, wenn Fokus angefordert oder beobachtet wird |
+| `requestFocus()` im Composable-Body | In `LaunchedEffect` verschieben |
+| Initialer Fokus auf `Unit` gekeyt, während das Ziel später erscheint | Auf geladene/sichtbare Bedingung keyen |
+| Fokus-Requester per Lazy-List-Index gespeichert | Per stabiler Item-Id speichern |
+| Alles bekommt eigene `focusProperties` | Raumsuche arbeiten lassen; nur kaputte Kanten überschreiben |
+| Key-Handler gibt für alle Keys `true` zurück | Nur behandelte Keys konsumieren |
+| Tests klicken Knoten in TV-/D-Pad-UI an | Key-Eingabe senden und Fokus prüfen |
 
-## Testing
+## Testen
 
-Test focus through user input:
+Teste Fokus über Nutzereingabe:
 
 ```kotlin
 composeTestRule.onNodeWithTag("screen").performKeyInput {
@@ -137,13 +138,13 @@ composeTestRule.onNodeWithTag("screen").performKeyInput {
 composeTestRule.onNodeWithTag("play-button").assertIsFocused()
 ```
 
-Prefer asserting focused semantics over visual styling. Use screenshot tests only for focus appearance, not for deterministic focus ownership.
+Bevorzuge das Prüfen fokussierter Semantics gegenüber visuellem Styling. Nutze Screenshot-Tests nur für das Fokus-Aussehen, nicht für deterministische Fokus-Ownership.
 
-Broader test-shape choices (plain UI vs integration, semantics-first): [`compose-ui-testing-patterns`](../compose-ui-testing-patterns/SKILL.md).
+Breitere Test-Form-Entscheidungen (schlichte UI vs. Integration, semantics-first): [`compose-ui-testing-patterns`](../compose-ui-testing-patterns/SKILL.md).
 
-## Red flags during review
+## Warnzeichen im Review
 
-- "It focuses correctly when I tap it" for a keyboard/TV UI.
-- Initial focus works only with fixed data and fails after loading/refresh.
-- Focus state is inferred from selected data state when focus and selection are different concepts.
-- The focus graph is described in comments but not encoded or tested.
+- „Es fokussiert korrekt, wenn ich es antippe" bei einer Tastatur-/TV-UI.
+- Initialer Fokus funktioniert nur mit festen Daten und scheitert nach Laden/Refresh.
+- Fokus-State wird aus dem Auswahl-Daten-State abgeleitet, obwohl Fokus und Auswahl verschiedene Konzepte sind.
+- Der Fokusgraph ist in Kommentaren beschrieben, aber nicht kodiert oder getestet.

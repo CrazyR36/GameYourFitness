@@ -1,41 +1,42 @@
 ---
 name: compose-stability-diagnostics
-description: Use when writing or reviewing Jetpack Compose parameter stability, compiler reports, skippability, unstable UI state classes, collection parameters, or Kotlin 2.0+ strong skipping behavior.
+description: "Nutze diesen Skill beim Schreiben oder Review von Jetpack-Compose-Parameter-Stabilität, Compiler-Reports, Skippability, instabilen UI-State-Klassen, Collection-Parametern oder Strong-Skipping-Verhalten ab Kotlin 2.0+."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose stability diagnostics
+# Compose-Stabilitäts-Diagnose
 
-## Core principle
+## Grundprinzip
 
-Compose parameter fixes start from evidence. First identify the compiler mode and the parameter comparison behavior, then change the model or call site that is actually defeating skipping.
+Compose-Parameter-Fixes beginnen bei Evidenz. Identifiziere zuerst den Compiler-Modus und das Parameter-Vergleichsverhalten, ändere dann das Modell oder die Aufrufstelle, die das Skipping tatsächlich vereitelt.
 
-With Kotlin 2.0.20+ strong skipping is enabled by default. Unstable parameters no longer automatically make restartable composables non-skippable, but unstable parameters compare by instance identity (`===`) while stable parameters compare by equality (`equals`). Churny unstable instances can still defeat skipping.
+Ab Kotlin 2.0.20+ ist Strong Skipping standardmäßig aktiv. Instabile Parameter machen restartable Composables nicht mehr automatisch non-skippable, aber instabile Parameter vergleichen per Instanz-Identität (`===`), stabile per Gleichheit (`equals`). Churny instabile Instanzen können Skipping trotzdem vereiteln.
 
-## Diagnostic procedure
+## Diagnose-Vorgehen
 
-1. Confirm the symptom: recomposition counts, compiler report output, or a suspected churny parameter.
-2. Identify compiler mode: Kotlin/Compose compiler version and whether strong skipping is enabled.
-3. Generate or read the Compose compiler reports for the shipped variant.
-4. For each suspicious parameter, decide whether the problem is stability semantics, instance churn, or a caller-created lambda/derived value.
-5. Apply the lightest fix that makes the type/call site truthful.
-6. Re-measure the same interaction or re-read the same report before claiming the issue is fixed.
+1. Bestätige das Symptom: Recomposition-Zähler, Compiler-Report-Ausgabe oder ein vermuteter churny Parameter.
+2. Identifiziere den Compiler-Modus: Kotlin-/Compose-Compiler-Version und ob Strong Skipping aktiv ist.
+3. Erzeuge oder lies die Compose-Compiler-Reports für die ausgelieferte Variante.
+4. Entscheide je verdächtigem Parameter, ob das Problem Stabilitätssemantik, Instanz-Churn oder ein vom Aufrufer erzeugtes Lambda/abgeleiteter Wert ist.
+5. Wende den leichtesten Fix an, der Typ/Aufrufstelle wahrheitsgemäß macht.
+6. Miss dieselbe Interaktion erneut oder lies denselben Report erneut, bevor du das Problem als behoben erklärst.
 
-## 1. Interpret strong skipping first
+## 1. Strong Skipping zuerst interpretieren
 
-On Kotlin 2.0.20+, strong skipping is enabled by default. In that mode:
+Auf Kotlin 2.0.20+ ist Strong Skipping standardmäßig aktiv. In diesem Modus:
 
-- Restartable composables are skippable even when parameters are unstable, unless explicitly opted out.
-- Stable parameters compare with `equals`.
-- Unstable parameters compare with instance equality (`===`).
-- Lambdas inside composables are automatically remembered based on captures.
+- Restartable Composables sind skippable, selbst wenn Parameter instabil sind, außer es wird explizit abgewählt.
+- Stabile Parameter vergleichen mit `equals`.
+- Instabile Parameter vergleichen mit Instanz-Gleichheit (`===`).
+- Lambdas in Composables werden automatisch anhand ihrer Captures geremembert.
 
-Ask: "will these parameters compare the way I expect, and are callers creating new unstable instances every frame?"
+Frage: „Vergleichen diese Parameter so, wie ich erwarte, und erzeugen Aufrufer in jedem Frame neue instabile Instanzen?"
 
-For older compiler setups or strong skipping disabled, the legacy rule still matters: a restartable composable with unstable parameters may be restartable but not skippable.
+Für ältere Compiler-Setups oder deaktiviertes Strong Skipping gilt die alte Regel weiter: Ein restartable Composable mit instabilen Parametern kann restartable, aber nicht skippable sein.
 
-## 2. Generate compiler reports
+## 2. Compiler-Reports erzeugen
 
-With Kotlin 2.0+ the Compose Compiler is configured through the Kotlin Gradle plugin:
+Ab Kotlin 2.0+ wird der Compose Compiler über das Kotlin-Gradle-Plugin konfiguriert:
 
 ```kotlin
 plugins {
@@ -52,54 +53,54 @@ if (providers.gradleProperty("composeReports").orNull == "true") {
 }
 ```
 
-Then build the variant whose compiler configuration you care about, for example:
+Baue dann die Variante, deren Compiler-Konfiguration dich interessiert, z. B.:
 
 ```bash
 ./gradlew :app:assembleRelease -PcomposeReports=true
 ```
 
-Use release/non-debuggable builds for runtime profiling. Compiler reports are build-time outputs, so the important thing is matching the variant and compiler flags you ship.
+Nutze Release-/nicht-debuggable-Builds für Laufzeit-Profiling. Compiler-Reports sind Build-Zeit-Ausgaben; wichtig ist daher, dass Variante und Compiler-Flags zu dem passen, was du auslieferst.
 
-Key files:
+Wichtige Dateien:
 
-| File | What it tells you |
+| Datei | Was sie dir sagt |
 |---|---|
-| `<module>-classes.txt` | Stability of classes and properties |
-| `<module>-composables.txt` | Restartable/skippable status and parameter stability |
-| `<module>-composables.csv` | Same data in sortable form |
-| `<module>-module.json` | Aggregate metrics |
+| `<module>-classes.txt` | Stabilität von Klassen und Properties |
+| `<module>-composables.txt` | Restartable/skippable-Status und Parameter-Stabilität |
+| `<module>-composables.csv` | Dieselben Daten in sortierbarer Form |
+| `<module>-module.json` | Aggregierte Metriken |
 
-## 3. Fix only the proven parameter problem
+## 3. Nur das bewiesene Parameter-Problem beheben
 
-Pick the lightest fix that makes the type's immutability or equality semantics true.
+Wähle den leichtesten Fix, der die Immutability- oder Gleichheitssemantik des Typs wahr macht.
 
-### Immutable collections
+### Immutable Collections
 
-If reports show collection interfaces on UI state, prefer `kotlinx.collections.immutable` at UI-state boundaries:
+Zeigen Reports Collection-Interfaces im UI-State, bevorzuge `kotlinx.collections.immutable` an den UI-State-Grenzen:
 
 ```kotlin
-// Before: unstable collection interfaces
+// Vorher: instabile Collection-Interfaces
 data class UiState(val items: List<Item>, val tags: Set<String>)
 
-// After: immutable collection contracts
+// Nachher: immutable Collection-Contracts
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 
 data class UiState(val items: ImmutableList<Item>, val tags: ImmutableSet<String>)
 ```
 
-Producers convert once at the boundary with `.toImmutableList()` / `.toImmutableSet()`.
+Producer konvertieren einmal an der Grenze mit `.toImmutableList()` / `.toImmutableSet()`.
 
 ### `@Immutable` / `@Stable`
 
-- Use `@Immutable` when every property is effectively immutable and equality describes all observable state.
-- Use `@Stable` for types whose mutable state is observable by Compose, typically via `MutableState`.
+- Nutze `@Immutable`, wenn jede Property effektiv unveränderlich ist und Gleichheit den gesamten beobachtbaren State beschreibt.
+- Nutze `@Stable` für Typen, deren veränderlicher State von Compose beobachtbar ist, typischerweise über `MutableState`.
 
-Do not annotate to silence a report. A false stability promise can produce stale UI.
+Annotiere nicht, um einen Report stummzuschalten. Ein falsches Stabilitätsversprechen kann veraltete UI erzeugen.
 
-### Third-party immutable types
+### Drittanbieter-Immutable-Typen
 
-For types you cannot annotate but can truthfully treat as immutable, use `stabilityConfigurationFiles`:
+Für Typen, die du nicht annotieren, aber wahrheitsgemäß als immutable behandeln kannst, nutze `stabilityConfigurationFiles`:
 
 ```kotlin
 composeCompiler {
@@ -116,16 +117,16 @@ java.time.*
 kotlinx.datetime.*
 ```
 
-Only list types you are willing to promise are immutable. Do not list mutable types such as `java.util.Date`.
+Liste nur Typen, deren Immutability du zu versprechen bereit bist. Liste keine veränderlichen Typen wie `java.util.Date`.
 
-## 4. Stabilize lazy item inputs
+## 4. Lazy-Item-Eingaben stabilisieren
 
-When lazy item recomposition comes from call-site churn, stabilize the values passed to each item instead of annotating models blindly.
+Kommt die Recomposition von Lazy-Items aus Call-Site-Churn, stabilisiere die an jedes Item übergebenen Werte, statt Modelle blind zu annotieren.
 
-Hoist and remember per-item inputs that are stable for the item's lifetime:
+Ziehe pro-Item-Eingaben, die für die Lebensdauer des Items stabil sind, hoch und remembere sie:
 
 ```kotlin
-// ❌ BAD — new lambda instances when parent recomposes
+// ❌ SCHLECHT — neue Lambda-Instanzen, wenn das Elternteil neu komponiert
 items(list, key = { it.id }) { item ->
     RowCard(
         onClick = { onItemClick(item.id) },
@@ -133,7 +134,7 @@ items(list, key = { it.id }) { item ->
     )
 }
 
-// ✅ GOOD — stable captures for this item instance
+// ✅ GUT — stabile Captures für diese Item-Instanz
 items(list, key = { it.id }) { item ->
     val onClick = remember(item.id) { { onItemClick(item.id) } }
     val isHighlighted = remember(item.id, selectedId) { item.id == selectedId }
@@ -141,31 +142,31 @@ items(list, key = { it.id }) { item ->
 }
 ```
 
-Also hoist row position metadata (`isFirst`, `isLast`, corner radii) with `remember(index) { … }` when the value depends only on index — but do not expect this alone to fix back-writing or cross-row measurement bugs.
+Ziehe auch Zeilen-Positions-Metadaten (`isFirst`, `isLast`, Eckradien) mit `remember(index) { … }` hoch, wenn der Wert nur vom Index abhängt — erwarte aber nicht, dass das allein Back-Writing- oder phasenübergreifende Mess-Bugs behebt.
 
-Verify focus moves and insertions with recomposition-count assertions after hoisting.
+Verifiziere Fokuswechsel und Einfügungen nach dem Hochziehen mit Recomposition-Zähler-Assertions.
 
-## Quick reference
+## Kurzreferenz
 
-| Symptom | Diagnosis | Fix |
+| Symptom | Diagnose | Fix |
 |---|---|---|
-| Kotlin 2.0.20+ but old docs say unstable means non-skippable | Strong skipping changed the default | Check comparison semantics and instance churn instead |
-| `unstable val items: List<Item>` | Interface collection | Use `ImmutableList<Item>` or another true immutable wrapper |
-| `unstable val price: BigDecimal` | External immutable type | Add to stability config |
-| `@Immutable` on a type with mutable internals | False promise | Fix the model or remove the annotation |
-| Composable skips poorly despite strong skipping | New unstable instance each recomposition | Remember, hoist, or make the type stable/equality-based |
-| Lazy items recompose on parent recompose despite unchanged data | New lambda or derived-value instance per parent recompose (§4) | Hoist per-item with `remember(item.id) { … }` |
-| Reports not generated | Compose compiler plugin missing or flag not set | Apply `org.jetbrains.kotlin.plugin.compose` and enable destinations |
+| Kotlin 2.0.20+, aber alte Docs sagen „instabil = non-skippable" | Strong Skipping hat den Default geändert | Stattdessen Vergleichssemantik und Instanz-Churn prüfen |
+| `unstable val items: List<Item>` | Interface-Collection | `ImmutableList<Item>` oder anderen echten Immutable-Wrapper nutzen |
+| `unstable val price: BigDecimal` | Externer Immutable-Typ | Zur Stability-Config hinzufügen |
+| `@Immutable` auf einem Typ mit veränderlichen Internals | Falsches Versprechen | Modell fixen oder Annotation entfernen |
+| Composable skippt schlecht trotz Strong Skipping | Neue instabile Instanz pro Recomposition | Remembern, hochziehen oder Typ stabil/equality-basiert machen |
+| Lazy-Items komponieren bei Eltern-Recomposition neu trotz unveränderter Daten | Neue Lambda- oder abgeleitete-Wert-Instanz pro Eltern-Recomposition (§4) | Pro Item mit `remember(item.id) { … }` hochziehen |
+| Reports werden nicht erzeugt | Compose-Compiler-Plugin fehlt oder Flag nicht gesetzt | `org.jetbrains.kotlin.plugin.compose` anwenden und Destinations aktivieren |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- The issue is back-writing across phases or cross-row measurement reads. Use [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
-- The issue is a fast-changing `State` read in composition, such as scroll or animation. Use [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
-- The recomposition count matches real data changes.
-- The bug is wrong data or stale state, not excess work.
-- The code is test-only and readability is more important than report cleanliness.
+- Das Problem ist Back-Writing über Phasen oder phasenübergreifende Mess-Reads. Nutze [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
+- Das Problem ist ein schnell wechselnder `State`-Read in der Composition, etwa Scroll oder Animation. Nutze [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md).
+- Der Recomposition-Zähler passt zu echten Datenänderungen.
+- Der Bug sind falsche Daten oder veralteter State, nicht überschüssige Arbeit.
+- Der Code ist nur für Tests und Lesbarkeit ist wichtiger als Report-Sauberkeit.
 
-## Related
+## Verwandt
 
-- [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) - frame-rate state should often be read in layout/draw rather than composition.
-- [`compose-recomposition-performance`](../compose-recomposition-performance/SKILL.md) - entry point when you are not sure which recomposition axis is involved.
+- [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) — frame-rate-State sollte oft in Layout/Draw statt in der Composition gelesen werden.
+- [`compose-recomposition-performance`](../compose-recomposition-performance/SKILL.md) — Einstiegspunkt, wenn unklar ist, welche Recomposition-Achse betroffen ist.

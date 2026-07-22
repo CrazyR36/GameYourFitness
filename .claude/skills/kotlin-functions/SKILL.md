@@ -1,57 +1,58 @@
 ---
 name: kotlin-functions
-description: Use when choosing Kotlin member, top-level, extension, factory, or service functions for String, primitive, collection, Flow, framework, or third-party receivers.
+description: "Nutze diesen Skill bei der Wahl zwischen Kotlin-Member-, Top-Level-, Extension-, Factory- oder Service-Funktionen für Receiver wie String, Primitive, Collections, Flow, Framework- oder Drittanbieter-Typen."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Kotlin function ownership
+# Ownership von Kotlin-Funktionen
 
-## Core principle
+## Grundprinzip
 
-Put a function on the smallest accurate semantic owner. Extension syntax changes call shape, not ownership.
+Lege eine Funktion auf den kleinsten zutreffenden semantischen Owner. Extension-Syntax ändert die Aufrufform, nicht die Ownership.
 
-Reject primitive, common, and library-owned extensions by default: they create false ownership, domain pollution, noisy completion/imports, and collisions.
+Lehne Extensions auf Primitiven, Allerwelts- und bibliothekseigenen Typen standardmäßig ab: Sie erzeugen falsche Ownership, Domänen-Verschmutzung, lautes Completion/Imports und Kollisionen.
 
-## Procedure
+## Vorgehen
 
-Apply in order.
+In dieser Reihenfolge anwenden.
 
-### 1. Name the semantic owner
+### 1. Benenne den semantischen Owner
 
-Name the operation and the concept that owns it. If ownership is unclear, stop before selecting syntax.
+Benenne die Operation und das Konzept, dem sie gehört. Ist die Ownership unklar, halte an, bevor du die Syntax wählst.
 
-### 2. Reject a misleading receiver early
+### 2. Verwirf einen irreführenden Receiver früh
 
-For `String`, primitives, collections, `Flow`, framework, or third-party receivers, require **all**:
+Für `String`, Primitive, Collections, `Flow`, Framework- oder Drittanbieter-Receiver müssen **alle** gelten:
 
-- Narrow `private`/`internal` cohesive scope.
-- Valid for every receiver value.
-- No policy, state, I/O, or dependency.
-- Materially clearer receiver syntax.
-- No better project-owned owner.
+- Enger, kohäsiver `private`/`internal`-Scope.
+- Gültig für jeden Receiver-Wert.
+- Keine Policy, kein State, kein I/O, keine Abhängigkeit.
+- Wesentlich klarere Receiver-Syntax.
+- Kein besserer projekteigener Owner.
 
-Any failure forbids an extension on that receiver; choose a non-extension form in step 3. `private fun <T> MutableList<T>.swap(...)` can pass: it is list-native, policy-free, and algorithm-local.
+Jeder Fehlschlag verbietet eine Extension auf diesem Receiver; wähle in Schritt 3 eine Nicht-Extension-Form. `private fun <T> MutableList<T>.swap(...)` kann bestehen: list-nativ, policy-frei und algorithmus-lokal.
 
-### 3. Choose the function form
+### 3. Wähle die Funktionsform
 
-| Meaning | Prefer |
+| Bedeutung | Bevorzuge |
 |---|---|
-| Project-owned intrinsic behavior | Member |
-| Cross-type, stateless operation | Top-level function |
-| Construction or parsing | Target factory or named top-level function |
-| Retained policy, state, I/O, clock, locale, or dependencies | Injected service/collaborator |
-| Type-native operation with a clearer receiver and every step-2 gate passed | Extension |
+| Projekteigenes, intrinsisches Verhalten | Member |
+| Typübergreifende, zustandslose Operation | Top-Level-Funktion |
+| Konstruktion oder Parsing | Ziel-Factory oder benannte Top-Level-Funktion |
+| Gehaltene Policy, State, I/O, Clock, Locale oder Abhängigkeiten | Injizierter Service/Kollaborator |
+| Typ-native Operation mit klarerem Receiver und allen bestandenen Gates aus Schritt 2 | Extension |
 
-Use a service/collaborator only when behavior retains policy, state, I/O, clock/locale, or dependencies; otherwise use explicit parameters on a stateless function.
+Nutze einen Service/Kollaborator nur, wenn das Verhalten Policy, State, I/O, Clock/Locale oder Abhängigkeiten hält; sonst nimm explizite Parameter auf einer zustandslosen Funktion.
 
-### 4. Move behavior and callers
+### 4. Verschiebe Verhalten und Aufrufer
 
-Move the implementation, then update calls, imports, and function references. Preserve or deprecate public entry points unless this is an explicit breaking release; add non-public migration support only for concrete consumers.
+Verschiebe die Implementierung, aktualisiere dann Aufrufe, Imports und Funktionsreferenzen. Erhalte oder deprecate öffentliche Einstiegspunkte, außer dies ist bewusst ein Breaking Release; füge nicht-öffentliche Migrationshilfen nur für konkrete Konsumenten hinzu.
 
 ```kotlin
-// Before: String falsely owns UserId construction.
+// Vorher: String besitzt fälschlich die UserId-Konstruktion.
 fun String.toUserId(): UserId = UserId(this)
 
-// After: UserId owns construction.
+// Nachher: UserId besitzt die Konstruktion.
 @JvmInline
 value class UserId private constructor(val value: String) {
     companion object {
@@ -62,34 +63,34 @@ value class UserId private constructor(val value: String) {
 val id = UserId.parse(raw)
 ```
 
-### 5. Verify and finish
+### 5. Prüfe und schließe ab
 
-For every form, check visibility, imports, collisions, and compatibility. For extensions, also check nullable receivers, generics, and future-member precedence. Compile and test; on failure, narrow the API or return to step 1.
+Prüfe bei jeder Form Sichtbarkeit, Imports, Kollisionen und Kompatibilität. Bei Extensions zusätzlich nullable Receiver, Generics und den Vorrang künftiger Member. Kompiliere und teste; bei Fehlschlag die API verengen oder zurück zu Schritt 1.
 
-## Rationalizations
+## Rechtfertigungen
 
-| “But…” | Counter |
+| „Aber…" | Konter |
 |---|---|
-| Fluent syntax | Readability does not create ownership. |
-| Kotlin uses extensions | Idiom still requires accurate semantics. |
-| It is private/internal | Scope helps only when every gate passes. |
-| Utility objects are worse | Use a top-level function or target factory. |
-| Default policy is obvious | Time zone/locale defaults are policy; keep them explicit. |
-| Already in the PR | Existing code does not prove ownership. |
+| Flüssige Syntax | Lesbarkeit schafft keine Ownership. |
+| Kotlin nutzt Extensions | Idiom verlangt trotzdem korrekte Semantik. |
+| Es ist private/internal | Scope hilft nur, wenn jedes Gate besteht. |
+| Utility-Objekte sind schlechter | Nimm eine Top-Level-Funktion oder Ziel-Factory. |
+| Die Default-Policy ist offensichtlich | Zeitzonen-/Locale-Defaults sind Policy; halte sie explizit. |
+| Steht schon im PR | Bestehender Code beweist keine Ownership. |
 
-## Red flags
+## Warnzeichen
 
-- Domain meaning on `String`, numbers, collections, `Flow`, or vendor types.
-- Clock, locale, I/O, policy, or dependencies hidden in an extension.
+- Domänenbedeutung auf `String`, Zahlen, Collections, `Flow` oder Fremdtypen.
+- Clock, Locale, I/O, Policy oder Abhängigkeiten in einer Extension versteckt.
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| `Long.toDisplayDate()` | A formatter owns time-zone/locale policy. |
-| Extension hides parsing | Use `Type.parse(raw)` or a named parser. |
-| Public library-type extension | Reclassify it using steps 1-3. |
+| `Long.toDisplayDate()` | Ein Formatter besitzt die Zeitzonen-/Locale-Policy. |
+| Extension versteckt Parsing | Nutze `Type.parse(raw)` oder einen benannten Parser. |
+| Öffentliche Extension auf Bibliothekstyp | Klassifiziere sie mit den Schritten 1–3 neu. |
 
-## Related
+## Verwandt
 
 - [`kotlin-types-value-class`](../kotlin-types-value-class/SKILL.md)

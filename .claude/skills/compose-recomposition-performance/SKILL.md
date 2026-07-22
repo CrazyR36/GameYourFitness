@@ -1,55 +1,56 @@
 ---
 name: compose-recomposition-performance
-description: Use when investigating Jetpack Compose recomposition performance, skippable/restartable composables, composables.txt or compiler reports, Layout Inspector recomposition counts, back-writing snapshot state across phases, or frame-rate State reads in composition vs layout/draw, and it is not yet clear whether the cause is parameter stability, deferred reads, or cross-phase back-writing.
+description: "Nutze diesen Skill bei der Untersuchung von Jetpack-Compose-Recomposition-Performance — skippable/restartable Composables, composables.txt oder Compiler-Reports, Recomposition-Zähler im Layout Inspector, phasenübergreifendes Zurückschreiben von Snapshot-State oder das Lesen von frame-rate-State in der Composition- statt der Layout-/Draw-Phase — und noch unklar ist, ob die Ursache Parameter-Stabilität, Deferred Reads oder phasenübergreifendes Back-Writing ist."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose recomposition performance
+# Compose-Recomposition-Performance
 
-Router only — deep fixes live in focused skills below.
+Nur Router — die eigentlichen Fixes liegen in den fokussierten Skills unten.
 
-## Three axes
+## Drei Achsen
 
-1. **Parameter stability / skipping** — can Compose skip this restartable composable; are arguments stable and comparable?
-2. **Where `State` is read** — is frame-rate `State` read during composition vs layout/draw?
-3. **Back-writing across phases** — does a later phase write snapshot state that invalidates an earlier phase? Examples: map/list mutation during composition that re-invalidates the same composition; `onSizeChanged` (layout phase) writing state read by a sibling in composition.
+1. **Parameter-Stabilität / Skipping** — kann Compose dieses restartable Composable überspringen; sind die Argumente stabil und vergleichbar?
+2. **Wo `State` gelesen wird** — wird frame-rate-`State` während der Composition statt in Layout/Draw gelesen?
+3. **Back-Writing über Phasen hinweg** — schreibt eine spätere Phase Snapshot-State, der eine frühere Phase invalidiert? Beispiele: Map-/List-Mutation während der Composition, die dieselbe Composition erneut invalidiert; `onSizeChanged` (Layout-Phase) schreibt State, den ein Geschwister-Composable in der Composition liest.
 
-Axes 2 and 3 often overlap (a sibling reading measured size in composition is both a deferred-read violation and a layout → composition back-write). Axis 1 is independent.
+Achsen 2 und 3 überschneiden sich oft (ein Geschwister-Composable, das die gemessene Größe in der Composition liest, ist zugleich ein Deferred-Read-Verstoß und ein Layout-→-Composition-Back-Write). Achse 1 ist unabhängig.
 
-## Route here → focused skill
+## Von hier weiter → fokussierter Skill
 
-| Primary suspicion | Next skill |
+| Hauptverdacht | Nächster Skill |
 |---|---|
-| Skipping, unstable params, compiler/`composables.txt` churn | [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) |
-| Frame-rate `State` read phase (composition vs layout/draw) | [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) |
-| `putAll` / map rebuild / cross-row `height(state)` during composition | [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) — § back-writing |
-| Focus-driven side work in composable body | [`compose-side-effects`](../compose-side-effects/SKILL.md) — `snapshotFlow` |
-| Evidence for multiple axes | Apply matching skills in parallel |
+| Skipping, instabile Parameter, Compiler-/`composables.txt`-Churn | [`compose-stability-diagnostics`](../compose-stability-diagnostics/SKILL.md) |
+| Lesephase von frame-rate-`State` (Composition vs. Layout/Draw) | [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) |
+| `putAll` / Map-Neuaufbau / phasenübergreifendes `height(state)` während der Composition | [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) — § Back-Writing |
+| Fokusgetriebene Nebenarbeit im Composable-Body | [`compose-side-effects`](../compose-side-effects/SKILL.md) — `snapshotFlow` |
+| Hinweise auf mehrere Achsen | passende Skills parallel anwenden |
 
-## Review order
+## Prüfreihenfolge
 
-1. Reproduce one transition (focus move, insertion, scroll) and note which composables recompose.
-2. If counts spike on unchanged lazy items, check back-writing (composition mutations and cross-row measurement) before blaming stability.
-3. If counts climb every frame during scroll/animation, check deferred reads.
-4. If skipping fails despite stable data, check parameter stability and compiler reports.
-5. Re-measure after each fix.
+1. Reproduziere einen Übergang (Fokuswechsel, Einfügen, Scroll) und notiere, welche Composables neu komponieren.
+2. Wenn die Zähler bei unveränderten Lazy-Items hochschnellen, prüfe Back-Writing (Composition-Mutationen und phasenübergreifende Messung), bevor du die Stabilität verantwortlich machst.
+3. Wenn die Zähler bei Scroll/Animation in jedem Frame steigen, prüfe Deferred Reads.
+4. Wenn Skipping trotz stabiler Daten fehlschlägt, prüfe Parameter-Stabilität und Compiler-Reports.
+5. Miss nach jedem Fix erneut.
 
-## False leads
+## Falsche Fährten
 
-These changes often **do not** reduce recomposition count:
+Diese Änderungen senken den Recomposition-Zähler oft **nicht**:
 
-| Attempt | Why it fails |
+| Versuch | Warum es scheitert |
 |---|---|
-| `remember(index) { isFirstRow(index) }` instead of inline `when (index)` | Same inputs; no skipping benefit |
-| Identity cache for read-only derived maps | Can serve stale overlays; `remember(keys)` is enough |
-| `mutableIntStateOf` + layout modifier on **both** measured and sibling rows | Sibling still reads size in composition unless measure-only |
-| Forcing `Exactly(1)` on both rows in focus-move tests | One row often correctly recomposes 0 times |
-| Hoisting without stabilizing lambda captures | New lambda instance each frame still defeats skipping |
+| `remember(index) { isFirstRow(index) }` statt inline `when (index)` | Gleiche Eingaben; kein Skipping-Vorteil |
+| Identitäts-Cache für read-only abgeleitete Maps | Kann veraltete Overlays liefern; `remember(keys)` genügt |
+| `mutableIntStateOf` + Layout-Modifier auf **beiden**, gemessener und Geschwister-Zeile | Geschwister liest die Größe weiterhin in der Composition, außer sie ist measure-only |
+| `Exactly(1)` auf beiden Zeilen in Fokuswechsel-Tests erzwingen | Eine Zeile komponiert oft korrekterweise 0-mal neu |
+| Hoisting ohne Stabilisieren der Lambda-Captures | Neue Lambda-Instanz pro Frame vereitelt das Skipping weiterhin |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- Recomposition tracks real data changes, or the bug is correctness not cost.
-- No profiler / compiler signal suggests a problem.
+- Die Recomposition folgt echten Datenänderungen, oder der Bug ist Korrektheit, nicht Kosten.
+- Kein Profiler-/Compiler-Signal deutet auf ein Problem hin.
 
-## Related
+## Verwandt
 
-- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — authoring `mutableState*` safely.
+- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — `mutableState*` sicher schreiben.

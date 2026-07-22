@@ -1,58 +1,59 @@
 ---
 name: compose-state-authoring
-description: Use when writing or reviewing Jetpack Compose code with bare local var in a @Composable, remember { mutableStateOf(...) }, mutableStateListOf/mutableStateMapOf, or @ReadOnlyComposable.
+description: "Nutze diesen Skill beim Schreiben oder Review von Jetpack-Compose-Code mit einem nackten lokalen var in einem @Composable, remember { mutableStateOf(...) }, mutableStateListOf/mutableStateMapOf oder @ReadOnlyComposable."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose state authoring
+# Compose-State-Authoring
 
-Not every `remember { … }` belongs here. This skill covers **local UI state** (`remember { mutableStateOf(…) }`, `mutableStateListOf` / `mutableStateMapOf`) and **`@ReadOnlyComposable`**. Other remembered APIs live in focused skills:
+Nicht jedes `remember { … }` gehört hierher. Dieser Skill behandelt **lokalen UI-State** (`remember { mutableStateOf(…) }`, `mutableStateListOf` / `mutableStateMapOf`) und **`@ReadOnlyComposable`**. Andere remember-APIs leben in fokussierten Skills:
 
 - **`rememberCoroutineScope` / `rememberUpdatedState`** → [`compose-side-effects`](../compose-side-effects/SKILL.md)
-- **`rememberLazyListState` / `rememberScrollState`** used for frame-rate reads → [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md)
-- **Focus navigation, focus state, `FocusRequester` ownership, behavior** → [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md)
+- **`rememberLazyListState` / `rememberScrollState`** für frame-rate-Reads → [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md)
+- **Fokus-Navigation, Fokus-State, `FocusRequester`-Ownership, Verhalten** → [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md)
 
-## Core principle
+## Grundprinzip
 
-A `@Composable` is a function the runtime re-runs whenever its inputs change. Writing local state correctly comes down to two questions:
+Ein `@Composable` ist eine Funktion, die die Runtime erneut ausführt, wann immer sich ihre Eingaben ändern. Lokalen State korrekt zu schreiben, läuft auf zwei Fragen hinaus:
 
-1. **Mutable local state** — does my `var` survive recomposition *and* trigger it? If not, it silently resets on every recompose and writes are invisible.
-2. **What kind of composable is this?** — do I *mutate* composition (place layout nodes, allocate slots, `remember`) or only *read* it? If only read, `@ReadOnlyComposable` lets the runtime skip work.
+1. **Veränderlicher lokaler State** — überlebt mein `var` die Recomposition *und* löst sie aus? Wenn nicht, wird er bei jeder Recomposition still zurückgesetzt und Schreibzugriffe sind unsichtbar.
+2. **Welche Art Composable ist das?** — *mutiere* ich die Composition (platziere Layout-Knoten, allokiere Slots, `remember`) oder *lese* ich sie nur? Wenn nur gelesen, lässt `@ReadOnlyComposable` die Runtime Arbeit sparen.
 
-Get either wrong and the symptoms are subtle: state that vanishes or optimizations that don't apply.
+Wird eines falsch, sind die Symptome subtil: State, der verschwindet, oder Optimierungen, die nicht greifen.
 
-## When to use this skill
+## Wann diesen Skill nutzen
 
-You're writing or reviewing Compose code and you see any of these:
+Du schreibst oder reviewst Compose-Code und siehst eines davon:
 
-- `var x = …` inside a `@Composable fun` or any composable lambda (`Column { var x = … }`)
-- A `@Composable fun` (or `@Composable get()` property accessor) whose body never lays anything out
-- `@ReadOnlyComposable` on a function that calls `Text`, `Box`, `Column`, `remember`, …
-- A composable whose visible state mysteriously resets on rotation, theme change, or recomposition
+- `var x = …` in einer `@Composable fun` oder einem beliebigen Composable-Lambda (`Column { var x = … }`)
+- Eine `@Composable fun` (oder ein `@Composable get()`-Property-Accessor), deren Body nie etwas layoutet
+- `@ReadOnlyComposable` auf einer Funktion, die `Text`, `Box`, `Column`, `remember`, … aufruft
+- Ein Composable, dessen sichtbarer State bei Rotation, Theme-Wechsel oder Recomposition rätselhaft zurückgesetzt wird
 
-## 1. `var` in a composable must be State-backed
+## 1. `var` in einem Composable muss State-backed sein
 
-Recomposition re-executes the composable from the top. A local `var` is *re-initialized* on every pass — last recompose's value is gone, and writing to it doesn't tell the runtime to recompose.
+Recomposition führt das Composable von oben erneut aus. Ein lokales `var` wird bei jedem Durchlauf *neu initialisiert* — der Wert der letzten Recomposition ist weg, und das Schreiben darauf sagt der Runtime nicht, dass sie neu komponieren soll.
 
 ```kotlin
-// ❌ BAD — counter resets on every recomposition; clicks never update the UI
+// ❌ SCHLECHT — counter wird bei jeder Recomposition zurückgesetzt; Klicks aktualisieren die UI nie
 @Composable
 fun Counter() {
     var count = 0
     Button(onClick = { count++ }) { Text("$count") }
 }
 
-// ❌ ALSO BAD — same rule applies inside composable content lambdas
+// ❌ EBENFALLS SCHLECHT — dieselbe Regel gilt in Composable-Content-Lambdas
 @Composable
 fun Wrapper() {
     Row {
-        var count = 0         // Row's content lambda is @Composable too
+        var count = 0         // Rows Content-Lambda ist ebenfalls @Composable
         // …
     }
 }
 ```
 
 ```kotlin
-// ✅ GOOD — `remember` survives recomposition, `mutableStateOf` triggers it
+// ✅ GUT — `remember` überlebt die Recomposition, `mutableStateOf` löst sie aus
 @Composable
 fun Counter() {
     var count by remember { mutableStateOf(0) }
@@ -60,123 +61,123 @@ fun Counter() {
 }
 ```
 
-Two pieces and both matter:
+Zwei Teile, und beide zählen:
 
-- `remember { … }` — *survives recomposition*. Without it the value is re-created each time.
-- `mutableStateOf(…)` — *triggers recomposition*. Without it, mutations are invisible to the runtime.
+- `remember { … }` — *überlebt die Recomposition*. Ohne es wird der Wert jedes Mal neu erzeugt.
+- `mutableStateOf(…)` — *löst die Recomposition aus*. Ohne es sind Mutationen für die Runtime unsichtbar.
 
-For collections, prefer `mutableStateListOf` / `mutableStateMapOf` (also `remember`-ed). They emit Snapshot reads on every read and Snapshot writes on every mutation. A `remember { mutableStateOf(mutableListOf<X>()) }` followed by `list.add(x)` will *not* recompose, because `MutableList.add` doesn't go through the State setter — you'd have to replace the value (`state = state + x`).
+Für Collections bevorzuge `mutableStateListOf` / `mutableStateMapOf` (ebenfalls `remember`-t). Sie emittieren bei jedem Read Snapshot-Reads und bei jeder Mutation Snapshot-Writes. Ein `remember { mutableStateOf(mutableListOf<X>()) }` gefolgt von `list.add(x)` wird *nicht* neu komponieren, weil `MutableList.add` nicht durch den State-Setter geht — du müsstest den Wert ersetzen (`state = state + x`).
 
-### Back-writing snapshot state during composition
+### Back-Writing von Snapshot-State während der Composition
 
-**Back-writing** means writing observable state in a phase that triggers invalidation of an earlier (or the current) phase. Mutating `mutableState*` from the composable body back-writes into the same composition pass and schedules another. Do not rebuild derived data this way:
+**Back-Writing** heißt, beobachtbaren State in einer Phase zu schreiben, die die Invalidierung einer früheren (oder der aktuellen) Phase auslöst. `mutableState*` aus dem Composable-Body zu mutieren, schreibt in denselben Composition-Durchlauf zurück und plant einen weiteren. Baue abgeleitete Daten nicht so neu auf:
 
 ```kotlin
-// ❌ BAD — clear + putAll on every composition
+// ❌ SCHLECHT — clear + putAll bei jeder Composition
 val merged = remember { mutableStateMapOf<Key, ViewState>() }
 merged.clear()
 merged.putAll(parent)
 merged.putAll(overlay)
 
-// ✅ GOOD — immutable snapshot remembered from inputs
+// ✅ GUT — unveränderlicher Snapshot, aus den Eingaben geremembert
 val merged = remember(parent, overlay) {
     if (overlay.isEmpty()) parent else parent + overlay
 }
 ```
 
-If the result is read-only for the current inputs, `remember(keys) { … }` is enough. See [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) for cross-row measurement and measure-phase fixes.
+Ist das Ergebnis für die aktuellen Eingaben read-only, genügt `remember(keys) { … }`. Siehe [`compose-state-deferred-reads`](../compose-state-deferred-reads/SKILL.md) für phasenübergreifende Messung und Measure-Phase-Fixes.
 
-### When this rule does NOT apply
+### Wann diese Regel NICHT gilt
 
-- **Inside `remember { … }`'s producer block.** That runs once per key change, not on every recompose. A local `var` there is fine: `val builder = remember { mutableListOf<X>().apply { var n = 0; … } }`.
-- **In non-`@Composable` lambdas passed *out* of a composable.** `onClick = { var a = 0; … }` is a plain `() -> Unit`. Local vars there are normal Kotlin.
-- **In plain (non-`@Composable`) helper functions.** Only composable scopes are affected.
+- **Im Producer-Block von `remember { … }`.** Der läuft einmal pro Key-Änderung, nicht bei jeder Recomposition. Ein lokales `var` dort ist in Ordnung: `val builder = remember { mutableListOf<X>().apply { var n = 0; … } }`.
+- **In nicht-`@Composable`-Lambdas, die *aus* einem Composable *heraus*gereicht werden.** `onClick = { var a = 0; … }` ist ein einfaches `() -> Unit`. Lokale vars dort sind normales Kotlin.
+- **In einfachen (nicht-`@Composable`) Hilfsfunktionen.** Nur Composable-Scopes sind betroffen.
 
-## 2. The `@ReadOnlyComposable` contract
+## 2. Der `@ReadOnlyComposable`-Contract
 
-`@ReadOnlyComposable` declares that a composable *only reads* composition state — no `Text`, no `Box`, no `remember`, no layout nodes, no positional slots. The runtime can then skip allocating a group for the call, which matters for fast accessor-style composables (`MaterialTheme.colorScheme`, `LocalDensity.current`, design-system token accessors).
+`@ReadOnlyComposable` erklärt, dass ein Composable Composition-State *nur liest* — kein `Text`, kein `Box`, kein `remember`, keine Layout-Knoten, keine positionalen Slots. Die Runtime kann dann das Allokieren einer Gruppe für den Aufruf überspringen, was für schnelle accessor-artige Composables zählt (`MaterialTheme.colorScheme`, `LocalDensity.current`, Design-System-Token-Accessoren).
 
-The contract is **bidirectional**:
+Der Contract ist **bidirektional**:
 
-- **Add `@ReadOnlyComposable`** when every composable call your body makes is itself `@ReadOnlyComposable` (or there are no composable calls at all — for example a function that only reads `LocalFoo.current` and returns a value).
-- **Don't add it** if you call any non-read-only composable. The optimization assumes you don't participate in composition; violating that produces incorrect recomposition behaviour for callers.
+- **Füge `@ReadOnlyComposable` hinzu**, wenn jeder Composable-Aufruf, den dein Body macht, selbst `@ReadOnlyComposable` ist (oder es gar keine Composable-Aufrufe gibt — z. B. eine Funktion, die nur `LocalFoo.current` liest und einen Wert zurückgibt).
+- **Füge es nicht hinzu**, wenn du irgendein nicht-read-only Composable aufrufst. Die Optimierung nimmt an, dass du nicht an der Composition teilnimmst; das zu verletzen erzeugt falsches Recomposition-Verhalten für Aufrufer.
 
 ```kotlin
-// ✅ GOOD — only reads composition locals, no layout, no remember
+// ✅ GUT — liest nur Composition-Locals, kein Layout, kein remember
 @Composable
 @ReadOnlyComposable
 fun appSpacing(): Dp = LocalDimensions.current.spacing
 
-// ✅ GOOD — composable property getter; same rule
+// ✅ GUT — Composable-Property-Getter; dieselbe Regel
 val accent: Color
     @Composable @ReadOnlyComposable
     get() = MaterialTheme.colorScheme.tertiary
 ```
 
 ```kotlin
-// ❌ BAD — annotated read-only but lays out a Box; contract violated
+// ❌ SCHLECHT — als read-only annotiert, layoutet aber eine Box; Contract verletzt
 @Composable
 @ReadOnlyComposable
 fun Header(): Int {
-    Box {}                  // ← non-read-only composable call
+    Box {}                  // ← nicht-read-only Composable-Aufruf
     return 42
 }
 
-// ❌ BAD — calls a normal composable from a read-only one
+// ❌ SCHLECHT — ruft ein normales Composable aus einem read-only auf
 @Composable
 @ReadOnlyComposable
 fun computed(): Int = nonReadOnlyHelper()
 ```
 
-### Heuristic for "should I add it"
+### Heuristik für „soll ich es hinzufügen"
 
-If the body contains any of these, **do not** add `@ReadOnlyComposable`:
+Enthält der Body eines davon, füge `@ReadOnlyComposable` **nicht** hinzu:
 
-- A layout call: `Box`, `Column`, `Row`, `LazyColumn`, `Text`, anything from `androidx.compose.foundation.layout` or `androidx.compose.material*`.
-- A side-effect call: `LaunchedEffect`, `DisposableEffect`, `SideEffect`, `produceState`.
-- `remember { … }` — positional memoization is composition state.
-- A `@Composable` lambda invocation (`content()`).
-- An invocation of a non-`@ReadOnlyComposable` composable function.
+- Einen Layout-Aufruf: `Box`, `Column`, `Row`, `LazyColumn`, `Text`, alles aus `androidx.compose.foundation.layout` oder `androidx.compose.material*`.
+- Einen Side-Effect-Aufruf: `LaunchedEffect`, `DisposableEffect`, `SideEffect`, `produceState`.
+- `remember { … }` — positionale Memoization ist Composition-State.
+- Eine `@Composable`-Lambda-Invocation (`content()`).
+- Eine Invocation einer nicht-`@ReadOnlyComposable`-Composable-Funktion.
 
-If the body is only reading `Local*.current`, calling other `@ReadOnlyComposable` functions, or doing pure computation, **add** it.
+Liest der Body nur `Local*.current`, ruft andere `@ReadOnlyComposable`-Funktionen auf oder macht reine Berechnung, **füge es hinzu**.
 
-### When this rule does NOT apply
+### Wann diese Regel NICHT gilt
 
-- **`override fun` declarations.** The annotation is part of the contract; if the base isn't `@ReadOnlyComposable`, you can't make an override one. Refactor the base, or accept the override pays the group-creation cost.
-- **Abstract declarations.** No body to check.
+- **`override fun`-Deklarationen.** Die Annotation ist Teil des Contracts; ist die Basis nicht `@ReadOnlyComposable`, kannst du einen Override nicht dazu machen. Refactore die Basis oder akzeptiere, dass der Override die Gruppen-Erzeugungskosten zahlt.
+- **Abstrakte Deklarationen.** Kein Body zum Prüfen.
 
-## Related: side effects live in their own skill
+## Verwandt: Side Effects leben in ihrem eigenen Skill
 
-If a composable needs `LaunchedEffect`, `DisposableEffect`, `SideEffect`, `rememberCoroutineScope`, `rememberUpdatedState`, `snapshotFlow`, snackbar/navigation handling, analytics, or Flow collection, use [`compose-side-effects`](../compose-side-effects/SKILL.md).
+Braucht ein Composable `LaunchedEffect`, `DisposableEffect`, `SideEffect`, `rememberCoroutineScope`, `rememberUpdatedState`, `snapshotFlow`, Snackbar-/Navigations-Behandlung, Analytics oder Flow-Collection, nutze [`compose-side-effects`](../compose-side-effects/SKILL.md).
 
-Focus splits by question: **navigation, focus state, `FocusRequester` ownership, behavior** → [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md); **when** to call imperative `requestFocus` (effect timing, lifecycle, keys, API choice) → [`compose-side-effects`](../compose-side-effects/SKILL.md).
+Fokus teilt sich nach Frage auf: **Navigation, Fokus-State, `FocusRequester`-Ownership, Verhalten** → [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md); **wann** man das imperative `requestFocus` aufruft (Effect-Timing, Lifecycle, Keys, API-Wahl) → [`compose-side-effects`](../compose-side-effects/SKILL.md).
 
-This skill is about authoring Compose state correctly. `rememberUpdatedState` is effect capture state, not a general replacement for `remember { mutableStateOf(...) }`. Side effects have separate lifecycle and keying rules, and keeping them in one focused skill avoids two sources of truth.
+Dieser Skill dreht sich um das korrekte Schreiben von Compose-State. `rememberUpdatedState` ist Effect-Capture-State, kein allgemeiner Ersatz für `remember { mutableStateOf(...) }`. Side Effects haben eigene Lifecycle- und Keying-Regeln, und sie in einem fokussierten Skill zu halten vermeidet zwei Quellen der Wahrheit.
 
-## Quick reference
+## Kurzreferenz
 
-| Symptom | Diagnosis | Fix |
+| Symptom | Diagnose | Fix |
 |---|---|---|
-| `var x = …` inside `@Composable fun` body | Not recomposition-safe (§1) | `var x by remember { mutableStateOf(…) }` |
-| `var x = …` inside `Column { … }` / `Row { … }` content lambda | Same — content lambdas are `@Composable` (§1) | Same fix |
-| `remember { mutableStateOf(list) }` then `.add(x)` not recomposing | Mutation bypasses State setter | Use `mutableStateListOf`, or replace the value: `state = state + x` |
-| `stateMap.clear(); stateMap.putAll(...)` in composable body | Back-writing composition → composition | `remember(keys) { derivedSnapshot }` |
-| `@Composable fun` with no `Text`/`Box`/`remember`/effect calls | Could be `@ReadOnlyComposable` (§2) | Add `@ReadOnlyComposable` above `@Composable` |
-| `@ReadOnlyComposable` function that calls `Box {}` / `Column {}` / a normal composable | Contract violation (§2) | Remove `@ReadOnlyComposable` |
+| `var x = …` im Body einer `@Composable fun` | Nicht recomposition-sicher (§1) | `var x by remember { mutableStateOf(…) }` |
+| `var x = …` im Content-Lambda von `Column { … }` / `Row { … }` | Dasselbe — Content-Lambdas sind `@Composable` (§1) | Gleicher Fix |
+| `remember { mutableStateOf(list) }` dann `.add(x)` komponiert nicht neu | Mutation umgeht den State-Setter | `mutableStateListOf` nutzen oder den Wert ersetzen: `state = state + x` |
+| `stateMap.clear(); stateMap.putAll(...)` im Composable-Body | Back-Writing Composition → Composition | `remember(keys) { derivedSnapshot }` |
+| `@Composable fun` ohne `Text`/`Box`/`remember`/Effect-Aufrufe | Könnte `@ReadOnlyComposable` sein (§2) | `@ReadOnlyComposable` über `@Composable` setzen |
+| `@ReadOnlyComposable`-Funktion, die `Box {}` / `Column {}` / ein normales Composable aufruft | Contract-Verletzung (§2) | `@ReadOnlyComposable` entfernen |
 
-## When NOT to apply
+## Wann NICHT anwenden
 
-- **Tests** with `composeTestRule.setContent { … }` follow the same rules — they're production composables.
-- **`produceState`** has its own producer block that runs in a coroutine; you don't need `LaunchedEffect` *inside* it.
-- **`derivedStateOf`** has its own concerns around stability and equality — out of scope here; it's about *preventing* recomposition, not authoring state.
-- **`override`s** of read-only-composable declarations: the annotation is fixed by the base; you can't add or remove it locally.
+- **Tests** mit `composeTestRule.setContent { … }` folgen denselben Regeln — sie sind Produktions-Composables.
+- **`produceState`** hat einen eigenen Producer-Block, der in einer Coroutine läuft; du brauchst *darin* kein `LaunchedEffect`.
+- **`derivedStateOf`** hat eigene Belange rund um Stabilität und Gleichheit — hier außerhalb des Rahmens; es geht ums *Verhindern* von Recomposition, nicht ums Schreiben von State.
+- **`override`s** von read-only-Composable-Deklarationen: Die Annotation ist durch die Basis festgelegt; du kannst sie lokal nicht hinzufügen oder entfernen.
 
-## Red flags during review
+## Warnzeichen im Review
 
-| Thought | Reality |
+| Gedanke | Realität |
 |---|---|
-| "It's a small composable, the bare `var` is fine" | Recomposition can fire at any time. The reset is non-deterministic by design — and a single bug report later. |
-| "I'll add `@ReadOnlyComposable` because the function looks simple" | "Simple" isn't the criterion. "Makes only read-only calls" is. |
-| "I always reach for `LaunchedEffect` because it's the one I know" | Use `compose-side-effects`; effect API choice depends on lifecycle and keys. |
-| "I'll just `.add()` to the remembered list" | A `mutableStateOf(List)` doesn't observe internal mutation — use `mutableStateListOf` or replace the value. |
-| "The override needs `@ReadOnlyComposable` to match what it does" | If the base isn't `@ReadOnlyComposable`, you can't add it to an override. Refactor the base instead. |
+| „Es ist ein kleines Composable, das nackte `var` ist okay" | Recomposition kann jederzeit feuern. Der Reset ist per Design nicht-deterministisch — und später ein einzelner Bug-Report. |
+| „Ich füge `@ReadOnlyComposable` hinzu, weil die Funktion einfach aussieht" | „Einfach" ist nicht das Kriterium. „Macht nur read-only-Aufrufe" ist es. |
+| „Ich greife immer zu `LaunchedEffect`, weil ich das kenne" | Nutze `compose-side-effects`; die Effect-API-Wahl hängt von Lifecycle und Keys ab. |
+| „Ich mache einfach `.add()` auf die geremberte Liste" | Ein `mutableStateOf(List)` beobachtet keine interne Mutation — nutze `mutableStateListOf` oder ersetze den Wert. |
+| „Der Override braucht `@ReadOnlyComposable`, damit er passt" | Ist die Basis nicht `@ReadOnlyComposable`, kannst du es einem Override nicht hinzufügen. Refactore stattdessen die Basis. |

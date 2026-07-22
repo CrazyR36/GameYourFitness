@@ -1,29 +1,30 @@
 ---
 name: compose-ui-testing-patterns
-description: Use when writing or reviewing Jetpack Compose UI tests, screenshot tests, previews, semantics assertions, fake image loading, keyboard input, focus assertions, interaction state (hover/pressed/focused), or tests for plain state-driven UI composables.
+description: "Nutze diesen Skill beim Schreiben oder Review von Jetpack-Compose-UI-Tests, Screenshot-Tests, Previews, Semantics-Assertions, Fake-Image-Loading, Tastatureingabe, Fokus-Assertions, Interaktions-State (hover/pressed/focused) oder Tests für schlichte, state-getriebene UI-Composables."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose: UI testing patterns
+# Compose: UI-Test-Muster
 
-## Core principle
+## Grundprinzip
 
-Test the smallest UI contract that proves the behavior. Prefer plain state-driven UI tests with callbacks. Add integration only when lifecycle, navigation, DI, or platform behavior is the thing under test.
+Teste den kleinsten UI-Contract, der das Verhalten beweist. Bevorzuge schlichte, state-getriebene UI-Tests mit Callbacks. Füge Integration nur hinzu, wenn Lifecycle, Navigation, DI oder Plattformverhalten das Getestete ist.
 
-## Test target choice
+## Wahl des Test-Targets
 
-| What you need to prove | Test shape |
+| Was du beweisen musst | Testform |
 |---|---|
-| Text, button, loading/error branch, conditional content | Plain UI Compose test |
-| Callback wiring from click/input | Plain UI Compose test |
-| Focus navigation or keyboard behavior | Compose test with key input |
-| Visual layout, clipping, elevation, typography, image composition | Screenshot test |
-| State holder updates UI correctly | State holder/unit test plus one wiring smoke test |
-| Hover, pressed, focused, dragged interaction state | Plain UI test with MutableInteractionSource |
-| Navigation, lifecycle, DI integration | Integration test |
+| Text, Button, Lade-/Fehlerzweig, bedingter Content | Schlichter UI-Compose-Test |
+| Callback-Verdrahtung aus Klick/Eingabe | Schlichter UI-Compose-Test |
+| Fokus-Navigation oder Tastaturverhalten | Compose-Test mit Key-Eingabe |
+| Visuelles Layout, Clipping, Elevation, Typografie, Bildkomposition | Screenshot-Test |
+| State-Holder aktualisiert UI korrekt | State-Holder-/Unit-Test plus ein Verdrahtungs-Smoke-Test |
+| Hover-, Pressed-, Focused-, Dragged-Interaktions-State | Schlichter UI-Test mit MutableInteractionSource |
+| Navigation, Lifecycle, DI-Integration | Integrationstest |
 
-## Prefer plain UI tests
+## Bevorzuge schlichte UI-Tests
 
-If the screen has a state holder/UI split, test the plain UI composable:
+Hat der Screen eine State-Holder-/UI-Trennung, teste das schlichte UI-Composable:
 
 ```kotlin
 composeTestRule.setContent {
@@ -41,22 +42,22 @@ composeTestRule.onNodeWithText("Save").performClick()
 assertThat(saved).isTrue()
 ```
 
-This avoids constructing ViewModels, components, repositories, navigation, and dependency graphs for layout behavior.
+Das vermeidet den Aufbau von ViewModels, Components, Repositories, Navigation und Dependency-Graphen für Layout-Verhalten.
 
-## Semantics first
+## Semantics zuerst
 
-Assert semantics when behavior is semantic:
+Prüfe Semantics, wenn Verhalten semantisch ist:
 
-- Text exists: `onNodeWithText`.
-- Button is enabled/disabled: `assertIsEnabled`, `assertIsNotEnabled`.
-- Content is selected/focused/toggled: use semantics assertions.
-- Content is absent: `assertDoesNotExist`.
+- Text existiert: `onNodeWithText`.
+- Button ist enabled/disabled: `assertIsEnabled`, `assertIsNotEnabled`.
+- Content ist selektiert/fokussiert/getoggelt: Semantics-Assertions nutzen.
+- Content fehlt: `assertDoesNotExist`.
 
-Use test tags for nodes that have no stable user-visible text or where multiple nodes share text. Do not use tags as the first choice for all assertions; user-visible semantics are usually stronger.
+Nutze Test-Tags für Knoten ohne stabilen, für Nutzer sichtbaren Text oder wo mehrere Knoten sich Text teilen. Nutze Tags nicht als erste Wahl für alle Assertions; für Nutzer sichtbare Semantics sind meist stärker.
 
-## Callback testing
+## Callback-Tests
 
-Use simple counters or captured values:
+Nutze einfache Zähler oder erfasste Werte:
 
 ```kotlin
 var selectedId: String? = null
@@ -73,11 +74,11 @@ composeTestRule.onNodeWithText("Movie").performClick()
 assertThat(selectedId).isEqualTo("movie-1")
 ```
 
-For plain captured callback values, a direct assertion after the action is usually enough. Use `runOnIdle` when the assertion needs Compose to finish applying snapshot state, recomposition, or queued UI work before reading the result.
+Für schlicht erfasste Callback-Werte genügt meist eine direkte Assertion nach der Aktion. Nutze `runOnIdle`, wenn die Assertion braucht, dass Compose das Anwenden von Snapshot-State, Recomposition oder eingereihte UI-Arbeit abschließt, bevor das Ergebnis gelesen wird.
 
-## Interaction state with MutableInteractionSource
+## Interaktions-State mit MutableInteractionSource
 
-When a composable's appearance or behavior depends on interaction state (hover, focus, press, drag), inject a `MutableInteractionSource` and emit the desired state directly. Do not try to simulate pointer/mouse events to trigger interaction states — that approach is fragile, environment-dependent, and produces flaky tests.
+Wenn Aussehen oder Verhalten eines Composables vom Interaktions-State abhängt (hover, focus, press, drag), injiziere eine `MutableInteractionSource` und emittiere den gewünschten State direkt. Versuche nicht, Pointer-/Maus-Events zu simulieren, um Interaktions-States auszulösen — das ist fragil, umgebungsabhängig und erzeugt flaky Tests.
 
 ```kotlin
 val interactionSource = MutableInteractionSource()
@@ -89,90 +90,90 @@ composeTestRule.setContent {
     )
 }
 
-// Assert default (un-hovered) state
+// Default-Zustand (nicht gehovert) prüfen
 composeTestRule.onNodeWithText("OutlinedButton").assertIsDisplayed()
 
-// Emit hover — interactionSource.emit is a suspend function,
-// so call it from a test coroutine scope.
+// Hover emittieren — interactionSource.emit ist eine suspend-Funktion,
+// also aus einem Test-Coroutine-Scope aufrufen.
 TestScope().launch {
     interactionSource.emit(HoverInteraction.Enter())
 }
 
 composeTestRule.waitForIdle()
 
-// Assert the visual/semantic change that hover produces
-// (e.g., border color, elevation, or capture for screenshot test)
+// Die visuelle/semantische Änderung prüfen, die Hover erzeugt
+// (z. B. Rahmenfarbe, Elevation oder Capture für Screenshot-Test)
 composeTestRule.onNodeWithText("OutlinedButton").assertIsDisplayed()
 ```
 
-The same pattern works for `PressInteraction.Press` / `Release` / `Cancel`, `FocusInteraction.Focus` / `Unfocus`, and `DragInteraction.Start` / `Stop` / `Cancel`. Emit the entry interaction, `waitForIdle`, then assert the result.
+Dasselbe Muster funktioniert für `PressInteraction.Press` / `Release` / `Cancel`, `FocusInteraction.Focus` / `Unfocus` und `DragInteraction.Start` / `Stop` / `Cancel`. Emittiere die Eintritts-Interaktion, `waitForIdle`, dann prüfe das Ergebnis.
 
-Key points:
+Kernpunkte:
 
-- **Always inject `MutableInteractionSource`** rather than relying on the default internal source. This gives you full control over state transitions.
-- **Emit interactions from a coroutine scope** (e.g. `TestScope().launch { }`) since `emit` is a suspend function. Do not use `LaunchedEffect` — that is a production Compose effect, not a test tool.
-- **Assert the *result* of the interaction** (visual change, semantic change, enabled state), not the interaction itself. The interaction source is a test *driver*, not the assertion target.
-- **Use this for screenshot tests too** — emit the interaction state, then capture the screenshot for a deterministic hover/press/focus visual.
+- **Injiziere immer `MutableInteractionSource`**, statt dich auf die interne Default-Source zu verlassen. Das gibt dir volle Kontrolle über State-Übergänge.
+- **Emittiere Interaktionen aus einem Coroutine-Scope** (z. B. `TestScope().launch { }`), da `emit` eine suspend-Funktion ist. Nutze kein `LaunchedEffect` — das ist ein Produktions-Compose-Effect, kein Testwerkzeug.
+- **Prüfe das *Ergebnis* der Interaktion** (visuelle Änderung, semantische Änderung, enabled-State), nicht die Interaktion selbst. Die Interaction Source ist ein Test-*Treiber*, kein Assertion-Ziel.
+- **Nutze das auch für Screenshot-Tests** — emittiere den Interaktions-State, dann nimm den Screenshot für ein deterministisches Hover-/Press-/Focus-Bild auf.
 
-## Keyboard and focus
+## Tastatur und Fokus
 
-For keyboard, TV, and desktop UI, drive navigation with the same input model users use (keys/D-pad), not clicks alone. Assert focused semantics, not colors or scale; reserve screenshots for visual focus treatment.
+Für Tastatur-, TV- und Desktop-UI treibe Navigation mit demselben Eingabemodell, das Nutzer verwenden (Keys/D-Pad), nicht mit Klicks allein. Prüfe fokussierte Semantics, nicht Farben oder Skalierung; reserviere Screenshots für die visuelle Fokus-Behandlung.
 
-Details—focus graph, `FocusRequester`, restoration, key handlers, and test patterns: [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md).
+Details — Fokusgraph, `FocusRequester`, Wiederherstellung, Key-Handler und Testmuster: [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md).
 
-## Screenshot tests
+## Screenshot-Tests
 
-Use screenshots for visual contracts that semantics cannot prove:
+Nutze Screenshots für visuelle Contracts, die Semantics nicht beweisen können:
 
-- Layout spacing/alignment.
-- Themed colors, typography, elevation, shadows.
-- Image composition, gradients, overlays.
-- Focus highlight appearance.
-- Loading skeletons or dense visual states.
+- Layout-Abstände/-Ausrichtung.
+- Themed Farben, Typografie, Elevation, Schatten.
+- Bildkomposition, Farbverläufe, Overlays.
+- Aussehen des Fokus-Highlights.
+- Lade-Skelette oder dichte visuelle Zustände.
 
-Keep screenshot state deterministic:
+Halte den Screenshot-State deterministisch:
 
-- Use fixed state data.
-- Freeze clocks or animation progress when possible.
-- Replace network/image loading with fake or preview handlers.
-- Avoid asserting dynamic text such as current time unless controlled.
+- Nutze feste State-Daten.
+- Friere Clocks oder Animationsfortschritt wo möglich ein.
+- Ersetze Netzwerk-/Image-Loading durch Fake- oder Preview-Handler.
+- Vermeide das Prüfen dynamischen Texts wie der aktuellen Uhrzeit, außer kontrolliert.
 
-## Fake images and platform services
+## Fake-Bilder und Plattform-Services
 
-When image content is irrelevant, fake the loader and assert the requested model if that is the behavior. The exact hook depends on your image library; a project helper might look like this:
+Wenn der Bildinhalt irrelevant ist, fake den Loader und prüfe das angeforderte Model, falls das das Verhalten ist. Der genaue Hook hängt von deiner Image-Bibliothek ab; ein Projekt-Helper könnte so aussehen:
 
 ```kotlin
 val requestedModels = mutableListOf<Any?>()
 
-// Example helper, not a Compose API.
+// Beispiel-Helper, keine Compose-API.
 setContentWithFakeImageLoader { request ->
     requestedModels += request.data
     errorPainter()
 }
 ```
 
-When image appearance matters, provide a deterministic local painter/bitmap instead of network data.
+Wenn das Bild-Aussehen zählt, liefere einen deterministischen lokalen Painter/Bitmap statt Netzwerkdaten.
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| Constructing full app graph to test an error row | Test plain UI with `state = Error` |
-| Testing click behavior through a ViewModel mock | Pass a callback and assert it was invoked |
-| Screenshot test for simple text presence | Use semantics assertion |
-| Semantics test for padding/color/focus ring | Use screenshot test |
-| Test tags everywhere | Prefer text/content description/role when stable |
-| UI test depends on real image loading/network/time | Fake or freeze the source |
-| Simulating hover/press/focus with mouse or touch events | Inject `MutableInteractionSource` and emit the interaction |
-| Relying on the default `InteractionSource` in tests | Pass `MutableInteractionSource` so you can control state |
-| TV/keyboard UI tested with `performClick` only | Use key input and focus assertions; see [compose-focus-navigation](../compose-focus-navigation/SKILL.md) |
+| Vollen App-Graphen aufbauen, um eine Fehler-Zeile zu testen | Schlichte UI mit `state = Error` testen |
+| Klick-Verhalten über einen ViewModel-Mock testen | Callback übergeben und prüfen, dass er aufgerufen wurde |
+| Screenshot-Test für einfache Textpräsenz | Semantics-Assertion nutzen |
+| Semantics-Test für Padding/Farbe/Fokus-Ring | Screenshot-Test nutzen |
+| Überall Test-Tags | Text/Content-Description/Role bevorzugen, wenn stabil |
+| UI-Test hängt an echtem Image-Loading/Netzwerk/Zeit | Quelle faken oder einfrieren |
+| Hover/Press/Fokus mit Maus- oder Touch-Events simulieren | `MutableInteractionSource` injizieren und die Interaktion emittieren |
+| Sich auf die Default-`InteractionSource` in Tests verlassen | `MutableInteractionSource` übergeben, um State zu kontrollieren |
+| TV-/Tastatur-UI nur mit `performClick` getestet | Key-Eingabe und Fokus-Assertions nutzen; siehe [compose-focus-navigation](../compose-focus-navigation/SKILL.md) |
 
-## Red flags during review
+## Warnzeichen im Review
 
-- "This UI test is flaky because images load slowly."
-- A test uses production DI for simple rendering.
-- A screenshot has random dates, clocks, remote images, or live data.
-- Assertions only check that a node exists after performing an action, not that the callback/state change happened.
-- Focus behavior is visually inspected but not asserted.
-- A test uses `performMouseInput` or touch injection to trigger hover/press states instead of `MutableInteractionSource.emit`.
-- A composable accepts `interactionSource` but tests don't inject `MutableInteractionSource`.
+- „Dieser UI-Test ist flaky, weil Bilder langsam laden."
+- Ein Test nutzt Produktions-DI für einfaches Rendering.
+- Ein Screenshot hat zufällige Daten, Clocks, Remote-Bilder oder Live-Daten.
+- Assertions prüfen nur, dass ein Knoten nach einer Aktion existiert, nicht dass die Callback-/State-Änderung passiert ist.
+- Fokusverhalten wird visuell inspiziert, aber nicht per Assertion geprüft.
+- Ein Test nutzt `performMouseInput` oder Touch-Injection, um Hover-/Press-States auszulösen, statt `MutableInteractionSource.emit`.
+- Ein Composable nimmt `interactionSource`, aber Tests injizieren keine `MutableInteractionSource`.

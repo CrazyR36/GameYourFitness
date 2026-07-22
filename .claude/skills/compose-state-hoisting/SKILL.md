@@ -1,43 +1,44 @@
 ---
 name: compose-state-hoisting
-description: "Use when deciding where Jetpack Compose UI element state or UI logic should live: local remember state, hoisted composable parameters, a plain state holder class, or a screen-level ViewModel/component."
+description: "Nutze diesen Skill bei der Entscheidung, wo Jetpack-Compose-UI-Element-State oder UI-Logik leben soll: lokaler remember-State, hochgezogene Composable-Parameter, eine einfache State-Holder-Klasse oder ein ViewModel/Component auf Screen-Ebene."
 ---
+<!-- Deutsche Übersetzung (2026-07-22) von chrisbanes/skills@2026.7.21 (Apache-2.0). Diese Datei wurde geändert: Prosa/Kommentare übersetzt, Code- und API-Bezeichner unverändert. -->
 
-# Compose state hoisting
+# Compose-State-Hoisting
 
-## Core principle
+## Grundprinzip
 
-Hoist state only as far as the logic needs it. Keep simple UI element state local, move shared UI element state to the lowest common composable owner, extract a plain state holder when UI-only behavior becomes a concept, and use a screen state holder when business logic or app data is involved.
+Ziehe State nur so weit hoch, wie die Logik es braucht. Halte einfachen UI-Element-State lokal, verschiebe geteilten UI-Element-State zum niedrigsten gemeinsamen Composable-Owner, extrahiere einen einfachen State-Holder, wenn reines UI-Verhalten zum Konzept wird, und nutze einen Screen-State-Holder, wenn Business-Logik oder App-Daten im Spiel sind.
 
-## Decision guide
+## Entscheidungshilfe
 
 | Situation | Owner |
 |---|---|
-| One composable reads/writes simple state | Keep local with `remember` / `rememberSaveable` |
-| Sibling or parent composables need to read/write it | Hoist state and events to their lowest common composable ancestor |
-| Related UI element state plus UI logic is making a composable hard to read, preview, or test | Extract a plain state holder class remembered in composition |
-| Repository calls, persistence, business rules, or screen UI state production are involved | Use a screen-level state holder such as a `ViewModel` or component |
+| Ein Composable liest/schreibt einfachen State | Lokal halten mit `remember` / `rememberSaveable` |
+| Geschwister- oder Eltern-Composables müssen ihn lesen/schreiben | State und Events zum niedrigsten gemeinsamen Composable-Vorfahren hochziehen |
+| Zusammengehöriger UI-Element-State plus UI-Logik macht ein Composable schwer lesbar, previewbar oder testbar | Einfache State-Holder-Klasse extrahieren, in der Composition remembert |
+| Repository-Aufrufe, Persistenz, Business-Regeln oder Erzeugung von Screen-UI-State sind beteiligt | Screen-State-Holder wie ein `ViewModel` oder Component nutzen |
 
-UI element state includes things like expansion, sheet visibility, scroll position, focus, text field editing state, selection, and animation/interaction state. Screen UI state is app data prepared for display.
+UI-Element-State umfasst Dinge wie Ausklappen, Sheet-Sichtbarkeit, Scroll-Position, Fokus, Textfeld-Editier-State, Auswahl sowie Animations-/Interaktions-State. Screen-UI-State sind App-Daten, die für die Anzeige aufbereitet sind.
 
-If UI element state is an input to business logic, it may need to live in the screen state holder too. For example, text used to query repository-backed suggestions belongs with the state holder that produces those suggestions.
+Ist UI-Element-State eine Eingabe für Business-Logik, muss er ggf. ebenfalls im Screen-State-Holder leben. Beispiel: Text, mit dem repository-gestützte Vorschläge abgefragt werden, gehört zu dem State-Holder, der diese Vorschläge erzeugt.
 
-## Plain state holder trigger
+## Auslöser für einen einfachen State-Holder
 
-Extract a plain state holder when several of these are true:
+Extrahiere einen einfachen State-Holder, wenn mehreres davon zutrifft:
 
-- Multiple related `remember` values are coordinated by the same callbacks.
-- Scroll, focus, text, selection, or sheet state needs named operations such as `clear`, `submit`, `jumpToTop`, or `openFilters`.
-- Derived UI flags are scattered through the composable.
-- Child composables receive mechanics they do not conceptually own.
-- Previews or tests must drive a long sequence of UI details to check one behavior.
-- Helper functions need many state parameters just to keep the composable readable.
+- Mehrere zusammengehörige `remember`-Werte werden von denselben Callbacks koordiniert.
+- Scroll-, Fokus-, Text-, Auswahl- oder Sheet-State braucht benannte Operationen wie `clear`, `submit`, `jumpToTop` oder `openFilters`.
+- Abgeleitete UI-Flags sind über das Composable verstreut.
+- Kind-Composables erhalten Mechanik, die ihnen konzeptionell nicht gehört.
+- Previews oder Tests müssen eine lange Folge von UI-Details durchspielen, um ein Verhalten zu prüfen.
+- Hilfsfunktionen brauchen viele State-Parameter, nur um das Composable lesbar zu halten.
 
-Do not extract for one boolean, one text field, or trivial show/hide logic. Ceremony is not separation of concerns.
+Extrahiere nicht für ein Boolean, ein Textfeld oder triviale Show/Hide-Logik. Zeremonie ist keine Separation of Concerns.
 
-## Pattern
+## Muster
 
-Use a plain class for UI element state and UI logic, plus a `remember...State` function for composition-owned objects:
+Nutze eine einfache Klasse für UI-Element-State und UI-Logik plus eine `remember...State`-Funktion für composition-eigene Objekte:
 
 ```kotlin
 @Stable
@@ -81,7 +82,7 @@ fun rememberProductSearchState(
 }
 ```
 
-The composable renders from the state holder and calls intent-style methods. If a parent needs to coordinate the same UI behavior, accept the state holder as a parameter with a default:
+Das Composable rendert aus dem State-Holder und ruft intent-artige Methoden auf. Muss ein Elternteil dasselbe UI-Verhalten koordinieren, nimm den State-Holder als Parameter mit Default:
 
 ```kotlin
 @Composable
@@ -103,33 +104,33 @@ fun ProductSearchPanel(
 }
 ```
 
-## Composition ownership
+## Composition-Ownership
 
-Plain state holders created with `remember` follow the composable lifecycle. This makes them a good home for Compose UI objects such as `LazyListState`, `FocusRequester`, `PagerState`, `DrawerState`, and `TextFieldState`.
+Einfache State-Holder, die mit `remember` erzeugt werden, folgen dem Composable-Lifecycle. Das macht sie zu einem guten Zuhause für Compose-UI-Objekte wie `LazyListState`, `FocusRequester`, `PagerState`, `DrawerState` und `TextFieldState`.
 
-Keep suspend UI operations that require a frame clock, such as scroll or drawer animations, in a composition-scoped coroutine (`rememberCoroutineScope`, `LaunchedEffect`, or another composition-owned scope). Do not move those calls to `viewModelScope`.
+Halte suspend-UI-Operationen, die eine Frame-Clock brauchen (z. B. Scroll- oder Drawer-Animationen), in einer composition-scoped Coroutine (`rememberCoroutineScope`, `LaunchedEffect` oder ein anderer composition-eigener Scope). Verschiebe diese Aufrufe nicht in den `viewModelScope`.
 
-## Saving state
+## State speichern
 
-Use `rememberSaveable` or a custom `Saver` only for values that should survive Activity or process recreation, such as a query string, selected filter IDs, or a current tab key.
+Nutze `rememberSaveable` oder einen eigenen `Saver` nur für Werte, die eine Activity- oder Prozess-Neuerstellung überleben sollen, etwa ein Query-String, ausgewählte Filter-IDs oder ein aktueller Tab-Key.
 
-Do not try to save runtime objects like `LazyListState`, `FocusRequester`, coroutine scopes, or callbacks directly. Save the minimal serializable values needed to rebuild behavior.
+Versuche nicht, Laufzeitobjekte wie `LazyListState`, `FocusRequester`, Coroutine-Scopes oder Callbacks direkt zu speichern. Speichere die minimalen serialisierbaren Werte, die nötig sind, um das Verhalten wieder aufzubauen.
 
-## Common mistakes
+## Häufige Fehler
 
-| Mistake | Fix |
+| Fehler | Fix |
 |---|---|
-| Hoisting every local state value to a parent "just in case" | Hoist to the lowest owner that actually reads or writes it |
-| Extracting a plain state holder for one boolean | Keep simple private UI state local |
-| Putting repository calls or product rules in a Compose state holder | Move that logic to a screen state holder such as a `ViewModel` or component |
-| Keeping text or selection local when it drives repository-backed screen state | Move that input to the screen state holder with the business logic |
-| Passing a state holder deep into unrelated children | Pass plain values and callbacks unless the child truly coordinates the holder's behavior |
-| Treating the holder as a dumping ground for a whole screen | Split by cohesive UI behavior, such as search input, sheet coordination, or list controls |
-| Calling animation suspend functions from `viewModelScope` | Use a composition-scoped coroutine |
+| Jeden lokalen State-Wert „vorsichtshalber" zum Elternteil hochziehen | Zum niedrigsten Owner hochziehen, der ihn wirklich liest/schreibt |
+| Einen einfachen State-Holder für ein Boolean extrahieren | Einfachen privaten UI-State lokal halten |
+| Repository-Aufrufe oder Produktregeln in einen Compose-State-Holder legen | Diese Logik in einen Screen-State-Holder wie `ViewModel` oder Component verschieben |
+| Text oder Auswahl lokal halten, obwohl sie repository-gestützten Screen-State treiben | Diese Eingabe zum Screen-State-Holder mit der Business-Logik verschieben |
+| Einen State-Holder tief in unbeteiligte Kinder reichen | Schlichte Werte und Callbacks reichen, außer das Kind koordiniert wirklich das Verhalten des Holders |
+| Den Holder als Abladeplatz für einen ganzen Screen behandeln | Nach kohäsivem UI-Verhalten aufteilen, z. B. Sucheingabe, Sheet-Koordination oder Listensteuerung |
+| Animations-suspend-Funktionen aus `viewModelScope` aufrufen | Composition-scoped Coroutine nutzen |
 
-## Related
+## Verwandt
 
-- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — correct local `remember` and mutable state authoring.
-- [`compose-state-holder-ui-split`](../compose-state-holder-ui-split/SKILL.md) — split screen state-holder wiring from plain state-driven UI rendering.
-- [`compose-side-effects`](../compose-side-effects/SKILL.md) — choose effect APIs and composition-scoped coroutine boundaries.
-- [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md) — focus state, requesters, and keyboard/D-pad behavior.
+- [`compose-state-authoring`](../compose-state-authoring/SKILL.md) — korrektes lokales `remember` und Authoring von Mutable State.
+- [`compose-state-holder-ui-split`](../compose-state-holder-ui-split/SKILL.md) — Screen-State-Holder-Verdrahtung vom schlichten, state-getriebenen UI-Rendering trennen.
+- [`compose-side-effects`](../compose-side-effects/SKILL.md) — Effect-APIs und composition-scoped Coroutine-Grenzen wählen.
+- [`compose-focus-navigation`](../compose-focus-navigation/SKILL.md) — Fokus-State, Requester und Tastatur-/D-Pad-Verhalten.
