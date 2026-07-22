@@ -12,7 +12,7 @@ Getroffene Entscheidungen: siehe [`docs/DECISIONS.md`](docs/DECISIONS.md).
 | Pfad | Inhalt |
 |---|---|
 | `app/src/main/java/com/gameyourfitness/app/ui` | Compose-UI, Theme (`ui/theme` — alle Farben/Typo/Abstände zentral) |
-| `app/src/main/java/com/gameyourfitness/app/domain` | Domänenlogik, reine Kotlin-Funktionen (u. a. künftig `domain/progression`) |
+| `app/src/main/java/com/gameyourfitness/app/domain` | Domänenlogik, reine Kotlin-Funktionen. `domain/progression` = zentrale Spielregeln (EP-Kurve, Level, Rang-Schwellen) |
 | `app/src/main/java/com/gameyourfitness/app/data` | Repository-Implementierungen, Backend-Zugriff |
 | `backend/` | Self-hosted Supabase-Stack (Docker Compose) + Caddy |
 | `backend/migrations/` | Versionierte SQL-Migrationen (fortlaufend nummeriert) |

@@ -168,3 +168,81 @@ Konsequenzen, Issue-Referenz.
   für nicht-sensible Präferenzen), muss es gezielt aktiviert werden **mit** Ausschluss der
   `auth_session`-Datei oder verschlüsselter Token-Ablage — nicht pauschal `allowBackup=true`.
 - **Issue:** #2
+
+## 2026-07-21 — Charakterdaten erweitern `profiles`, Level wird aus EP abgeleitet
+
+- **Entscheidung:** Der Charakter-Spielstand liegt als zusätzliche Spalten auf `public.profiles`
+  (`total_xp`, `rank`, `strength`, `vitality`, `agility`, `perception`), nicht in einer eigenen
+  `characters`-Tabelle. Das **Level** wird NICHT gespeichert, sondern per reiner Funktion aus
+  `total_xp` abgeleitet (`domain/progression/Progression.levelForXp`).
+- **Alternativen:** Separate `characters`-Tabelle (1:1 zu `profiles`); Level als eigene Spalte speichern.
+- **Begründung:** In #2 wurde `profiles` bewusst minimal gehalten (nur `user_id`, `created_at`),
+  damit #3 sie erweitert statt Vorratsfelder mitzuschleppen (so auch die #2-Retro). Eine 1:1-Tabelle
+  wäre reine Zeremonie. Ein gespeichertes Level könnte von `total_xp` abweichen — eine Quelle der
+  Wahrheit (CLAUDE.md 6) verlangt die Ableitung.
+- **Konsequenzen:** `total_xp` ist die materialisierte EP-Summe; der Audit-Trail (EP-Events) entsteht
+  in #4, wenn EP tatsächlich vergeben werden. Ab #5 berechnet der Server das Level für die
+  Level-Up-Erkennung — dann muss die EP-Kurve serverseitig (SQL) gespiegelt und per Test gegen die
+  Kotlin-Kurve abgeglichen werden. Für #3 reicht die clientseitige Ableitung (nur Anzeige).
+- **Issue:** #3
+
+## 2026-07-21 — EP-Kurve und Rang-Schwellen: erste Version (bestätigungspflichtig)
+
+- **Entscheidung:** Balancing zentral in `domain/progression/` als reine Funktionen/Konstanten.
+  EP für L→L+1 = `100 · L`; kumulativ bis Level L = `50 · (L-1) · L` (L2=100, L3=300, L5=1000).
+  Rang-Mindestlevel: E=1, D=5, C=10, B=20, A=35, S=50. Start-Stats je 10, Start-Rang E.
+- **Alternativen:** Lineare EP-Kurve, exponentielle Kurve (`BASE·q^L`), Rang direkt aus Level ableiten.
+- **Begründung:** Quadratisch wächst spürbar, aber nicht erdrückend, und die Umkehrfunktion ist in
+  ganzzahliger Arithmetik exakt lösbar. Der Rang ist bewusst KEIN Level-Derivat, sondern wird ab #10
+  über einen Aufstiegstest verdient (Solo-Leveling-Gefühl) — die Schwellen gaten nur die Eignung.
+- **Konsequenzen:** Spielregeln (CLAUDE.md 6/10) → dem Nutzer **zur Bestätigung** vorgelegt (Issue #3).
+  Alle Werte sind Konstanten an einer Stelle und ohne Code-Umbau änderbar. Initiale Charakterwerte
+  liegen als **Migration-Defaults** serverseitig (Server ist Quelle der Wahrheit für Anfangswerte) —
+  bewusst getrennt von den Kurven-Konstanten (Berechnung ≠ Seeding).
+- **Issue:** #3
+
+## 2026-07-21 — `profiles` ist client-read-only (Anti-Cheat)
+
+- **Entscheidung:** In #3 werden das `update`-Grant und die `profiles_update_own`-Policy aus #2
+  zurückgenommen. `profiles` ist für Clients nur noch lesbar; `total_xp`/`rank`/Stats sind
+  serverseitig verwaltet (Trigger jetzt; EP-Funktionen ab #4).
+- **Alternativen:** Update erlauben und nur einzelne Spalten per Trigger schützen; Update erst in #4 sperren.
+- **Begründung:** EP/Stats/Rang dürfen nie client-schreibbar sein (CLAUDE.md 6). Die #2-Update-Policy
+  war ungenutzt; ein offener Schreibpfad auf `total_xp` wäre genau die Cheat-Fläche, die #3 mit den
+  Progression-Spalten erst einführt — also hier schließen, nicht später. Der RLS-Negativtest beweist:
+  Selbst-`PATCH` auf `total_xp` → 403.
+- **Konsequenzen:** Serverseitige Änderungen laufen über `security definer`-Funktionen/Trigger.
+  Wird künftig ein nutzer-editierbares Feld nötig (z. B. Anzeigename), bekommt es eine gezielte,
+  spaltenbeschränkte Update-Policy — kein pauschales Tabellen-Update.
+- **Issue:** #3
+
+## 2026-07-21 — E2E-Seeding von Charakterwerten über `service_role`
+
+- **Entscheidung:** Der „gefüllter EP-Balken"-E2E-Test seedet EP/Stats per PostgREST-`PATCH` mit dem
+  `service_role`-Key (bypasst RLS). Der Screen liest danach echt mit dem Nutzer-JWT.
+- **Alternativen:** Client-Update erlauben (widerspricht Anti-Cheat); `service_role`-Key per
+  Instrumentation-Argument aus der CI reichen; eine test-gegatete SQL-RPC.
+- **Begründung:** Die Startwerte-Defaults reichen für „neuer Nutzer", aber nicht für einen sichtbar
+  gefüllten Balken (Level 1, 0 %). Da der Client nicht schreiben darf, ist der Admin-Key der einzige
+  saubere Seed-Weg. Er ist der **öffentliche** Beispiel-Key des lokalen/CI-Stacks und liegt
+  ausschließlich im `androidTest`-Quellcode (Test-APK) — nie in der App (CLAUDE.md 8); auf einem echten
+  Server wird er abgelehnt (#13). So bleibt „gegen echtes Backend" gewahrt.
+- **Konsequenzen:** Muster für künftige Slices, die serverseitig verwaltete Werte anzeigen. Der
+  Offline-Fall wird separat über ein austauschbares `CharacterApi`-Binding (`@TestInstallIn`) erzwungen.
+- **Issue:** #3
+
+## 2026-07-21 — Post-Login-Screen ist der Charakterbildschirm; eigener PostgREST-Client
+
+- **Entscheidung:** Der bisherige Home-Screen wird durch den Charakterbildschirm ersetzt (eigenes
+  `CharacterViewModel`, genau ein `StateFlow<UiState>`). Der Backend-Zugriff nutzt einen schlanken,
+  handgeschriebenen PostgREST-Client (OkHttp) hinter dem `CharacterRepository`-Interface.
+- **Alternativen:** Home und Charakter als getrennte Ziele (Navigation-Library); `supabase-kt`/PostgREST-SDK.
+- **Begründung:** Es gibt weiterhin nur zwei App-Zustände (an-/abgemeldet) → keine Navigation-Library
+  nötig (wie #2). Der Slice braucht genau einen PostgREST-`GET` — ein SDK wäre unverhältnismäßig
+  (analog zum GoTrue-Client, DECISIONS #2). Die zwei `home_*`-TestTags wurden auf `character_*` migriert
+  (LoginE2ETest zog mit; gleiche Zusicherung).
+- **Konsequenzen:** `CharacterHttpApi` liest den Access-Token aus dem `SessionStore` (data→data). Ein
+  proaktiver Token-Refresh pro Request ist bewusst nicht Teil von #3 (Refresh beim App-Start deckt den
+  Normalfall; abgelaufener Token → Fehlerzustand mit Retry). Navigation-Compose kommt mit dem ersten
+  echten Mehrfachziel.
+- **Issue:** #3

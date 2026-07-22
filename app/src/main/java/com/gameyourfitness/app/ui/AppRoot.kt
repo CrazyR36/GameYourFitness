@@ -15,7 +15,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gameyourfitness.app.domain.auth.AuthState
 import com.gameyourfitness.app.ui.auth.AuthViewModel
 import com.gameyourfitness.app.ui.auth.LoginScreen
-import com.gameyourfitness.app.ui.home.HomeScreen
+import com.gameyourfitness.app.ui.character.CharacterRoute
 
 /**
  * Schaltet ohne Navigation-Library zwischen Login- und Startbildschirm anhand
@@ -47,7 +47,7 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: AuthViewModel = hiltViewMo
             )
 
         is AuthState.SignedIn ->
-            HomeScreen(
+            CharacterRoute(
                 onSignOut = viewModel::onSignOutClick,
                 modifier = modifier
             )
