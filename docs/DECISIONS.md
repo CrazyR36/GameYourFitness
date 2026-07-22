@@ -168,3 +168,28 @@ Konsequenzen, Issue-Referenz.
   für nicht-sensible Präferenzen), muss es gezielt aktiviert werden **mit** Ausschluss der
   `auth_session`-Datei oder verschlüsselter Token-Ablage — nicht pauschal `allowBackup=true`.
 - **Issue:** #2
+
+## 2026-07-22 — Agentische Projekt-Infrastruktur unter `.claude/`
+
+- **Entscheidung:** Das Repo bekommt versioniertes Agent-Tooling unter `.claude/`:
+  (a) eigener Workflow-Skill `next-slice` (operationalisiert CLAUDE.md Abschnitt 0),
+  (b) eigener `design-system`-Skill (Abschnitt 7 mit den echten Theme-Tokens + System-Fenster),
+  (c) vendored & gepinnte **Handwerks**-Skills aus `chrisbanes/skills` (Compose/Kotlin).
+- **Alternativen:** Keine Skills (Regeln nur als gelesener Text); externe Skills per
+  Live-Install (`npx skills add`) statt vendored; breite Adoption mehrerer Skill-Repos.
+- **Begründung:** CLAUDE.md ist exzellent, wurde aber jede Session neu von Hand befolgt —
+  Skills machen den Ablauf wiederholbar. Universelles Compose/Kotlin-Handwerk ist bei
+  Experten-Skills (Chris Banes) besser aufgehoben als im Eigenbau; Projektwissen
+  (Slice-Prozess, System-Fenster, RLS-Fallen) gibt es extern nicht → bleibt eigen.
+  Vendored+gepinnt (Tag `2026.7.21`, Commit `289eb24`) statt Live-Install passt zur
+  Reproduzierbarkeits-Kultur (gepinnte `libs.versions.toml`, idempotente CI) und erlaubt
+  Review vor Vertrauen (SKILL.md = Anweisungen, die der Agent befolgt).
+- **Konsequenzen:** Nur reputable Quellen (Autor-Glaubwürdigkeit/Verbreitung). Die
+  Workflow-Skills aus chrisbanes (`implement-issue`, `shepherd`, Router) **nicht** übernommen
+  — sie würden mit `next-slice` um Trigger konkurrieren; eigener Prozess + CLAUDE.md regeln
+  das. Unter reputable-only abgelehnt: rcosteira79 (Koin ↔ Hilt), aihip (Firebase verboten),
+  claude-android-ninja (monolithisch). Update der vendored Skills: neuen Tag ziehen,
+  compose-*/kotlin-* ersetzen, Commit/Tag in `.claude/skills/NOTICE-chrisbanes-skills.md`
+  pflegen, Inhalt sichten. **Zurückgestellt** (Nutzer-Entscheidung, 2026-07-22):
+  SessionStart-Hook und `settings.json`-Permission-Allowlist.
+- **Issue:** Session „improve-agentic-work"
