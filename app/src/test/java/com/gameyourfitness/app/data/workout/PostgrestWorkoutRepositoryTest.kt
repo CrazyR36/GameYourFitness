@@ -35,16 +35,31 @@ class PostgrestWorkoutRepositoryTest {
         store.save(session)
         val requestSlot = slot<LogWorkoutRequest>()
         coEvery { api.logStrengthWorkout("access-token", capture(requestSlot)) } returns
-            LogWorkoutResponse(xpAwarded = 40, totalXp = 40)
+            LogWorkoutResponse(xpAwarded = 40, totalXp = 40, levelBefore = 1, levelAfter = 1)
 
         val result = repository().logStrengthWorkout(workout)
 
-        assertEquals(40L, (result as LogWorkoutResult.Success).awardedXp)
+        val success = result as LogWorkoutResult.Success
+        assertEquals(40L, success.awardedXp)
+        assertEquals(1, success.levelBefore)
+        assertEquals(1, success.levelAfter)
         assertEquals("Kniebeuge", requestSlot.captured.exercise)
         assertEquals(5, requestSlot.captured.sets)
         assertEquals(5, requestSlot.captured.reps)
         assertEquals(60, requestSlot.captured.weightKg)
         coVerify { api.logStrengthWorkout("access-token", any()) }
+    }
+
+    @Test
+    fun `Level vor und nach der Vergabe werden vom Server durchgereicht`() = runTest {
+        store.save(session)
+        coEvery { api.logStrengthWorkout(any(), any()) } returns
+            LogWorkoutResponse(xpAwarded = 1000, totalXp = 1000, levelBefore = 1, levelAfter = 5)
+
+        val success = repository().logStrengthWorkout(workout) as LogWorkoutResult.Success
+
+        assertEquals(1, success.levelBefore)
+        assertEquals(5, success.levelAfter)
     }
 
     @Test

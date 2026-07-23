@@ -29,11 +29,16 @@ data class LogWorkoutRequest(
     @SerialName("p_weight_kg") val weightKg: Int
 )
 
-/** Rückgabe der SQL-Funktion (vom Server vergebene EP + neuer EP-Stand). */
+/**
+ * Rückgabe der SQL-Funktion: vom Server vergebene EP, neuer EP-Stand sowie das
+ * serverseitig berechnete Level VOR und NACH der Vergabe (Level-Up-Erkennung, #5).
+ */
 @Serializable
 data class LogWorkoutResponse(
     @SerialName("xp_awarded") val xpAwarded: Long,
-    @SerialName("total_xp") val totalXp: Long
+    @SerialName("total_xp") val totalXp: Long,
+    @SerialName("level_before") val levelBefore: Int,
+    @SerialName("level_after") val levelAfter: Int
 )
 
 fun StrengthWorkout.toRequest(): LogWorkoutRequest = LogWorkoutRequest(

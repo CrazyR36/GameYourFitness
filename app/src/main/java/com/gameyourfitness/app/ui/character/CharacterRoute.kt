@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gameyourfitness.app.ui.levelup.LevelUpOverlay
 import com.gameyourfitness.app.ui.workout.WorkoutLogDialog
 import com.gameyourfitness.app.ui.workout.WorkoutLogUiState
 import com.gameyourfitness.app.ui.workout.WorkoutLogViewModel
@@ -32,11 +33,14 @@ fun CharacterRoute(
     val uiState by viewModel.uiState.collectAsState()
     val workoutState by workoutViewModel.uiState.collectAsState()
     var workoutDialogOpen by rememberSaveable { mutableStateOf(false) }
+    var levelUpLevel by rememberSaveable { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(workoutState) {
-        if (workoutState is WorkoutLogUiState.Success) {
+        val state = workoutState
+        if (state is WorkoutLogUiState.Success) {
             viewModel.reload()
             workoutDialogOpen = false
+            if (state.leveledUp) levelUpLevel = state.newLevel
             workoutViewModel.reset()
         }
     }
@@ -59,4 +63,6 @@ fun CharacterRoute(
             }
         )
     }
+
+    LevelUpOverlay(level = levelUpLevel, onDismiss = { levelUpLevel = null })
 }

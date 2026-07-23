@@ -35,8 +35,19 @@ class WorkoutLogViewModelTest {
         vm.submit(workout)
         assertEquals(WorkoutLogUiState.Submitting, vm.uiState.value)
 
-        gate.complete(LogWorkoutResult.Success(awardedXp = 40))
-        assertEquals(WorkoutLogUiState.Success, vm.uiState.value)
+        gate.complete(LogWorkoutResult.Success(awardedXp = 40, levelBefore = 1, levelAfter = 1))
+        assertEquals(WorkoutLogUiState.Success(leveledUp = false, newLevel = 1), vm.uiState.value)
+    }
+
+    @Test
+    fun `Level-Aufstieg wird als Success mit leveledUp und neuem Level gemeldet`() = runTest {
+        coEvery { repository.logStrengthWorkout(workout) } returns
+            LogWorkoutResult.Success(awardedXp = 1000, levelBefore = 1, levelAfter = 5)
+
+        val vm = viewModel()
+        vm.submit(workout)
+
+        assertEquals(WorkoutLogUiState.Success(leveledUp = true, newLevel = 5), vm.uiState.value)
     }
 
     @Test
@@ -70,7 +81,7 @@ class WorkoutLogViewModelTest {
         vm.submit(workout)
         vm.submit(workout)
 
-        gate.complete(LogWorkoutResult.Success(awardedXp = 40))
+        gate.complete(LogWorkoutResult.Success(awardedXp = 40, levelBefore = 1, levelAfter = 1))
         coVerify(exactly = 1) { repository.logStrengthWorkout(workout) }
     }
 

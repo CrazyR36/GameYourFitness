@@ -352,3 +352,26 @@ Konsequenzen, Issue-Referenz.
   kein Re-Trigger. Sollte später ein echter Screen-Wechsel nötig werden (Historie, Quests-Screen), wird
   Navigation-Compose eingeführt und das Popup-Muster bleibt für Formulare bestehen.
 - **Issue:** #4
+
+## 2026-07-23 — Level-Erkennung serverseitig; Level-Kurve in SQL gespiegelt
+
+- **Entscheidung:** Die EP-Kurve aus `domain/progression/Progression` (Kotlin) wird als SQL-Funktionen
+  `xp_to_reach_level`/`level_for_xp` gespiegelt (Migration `0004`). Die bestehende RPC `log_strength_workout`
+  liefert zusätzlich `level_before`/`level_after` (aus `total_xp` vor/nach der Vergabe, Zeile per
+  `for update` gesperrt). Der Client zeigt bei `level_after > level_before` das Level-Up-Popup. Die
+  SQL↔Kotlin-Parität wird im `backend-stack`-Job (`test-rls.sh`) an denselben Grenzwerten wie
+  `ProgressionTest` per `psql` bewiesen.
+- **Alternativen:** Level-Up nur clientseitig aus `total_xp` ableiten; eine separate RPC nur für die
+  Level-Berechnung; das Level als Spalte speichern.
+- **Begründung:** „Level-Aufstieg wird serverseitig berechnet, nie nur im Client" (CLAUDE.md 6/8, Issue #5).
+  Die Level-Erkennung dort zu machen, wo die EP entstehen (in der Vergabe-RPC), hält sie manipulationssicher
+  und ist atomar mit der EP-Buchung. `level_for_xp` nutzt eine Float-Schätzung mit exakter Ganzzahl-Korrektur,
+  damit es an den Schwellen bitgenau der Kotlin-Binärsuche entspricht — der `psql`-Test in `test-rls.sh` ist
+  der in DECISIONS (2026-07-21, #3) angekündigte Abgleich. Level bleibt abgeleitet (nicht gespeichert) —
+  eine Quelle der Wahrheit.
+- **Konsequenzen:** Muster für alle künftigen EP-Quellen (#6/#7/#8): dieselbe RPC-Konvention
+  (`level_before`/`level_after` zurückgeben), derselbe Client-Pfad zum Popup. Das animierte „System-Fenster"-
+  Level-Up-Popup (`LevelUpOverlay` via `AnimatedVisibility`, stateless `LevelUpPopup`-Inhalt) ist über die
+  auf dem CI-Emulator deaktivierten Animationen testbar; das Popup ist transient (nach App-Neustart wird nur
+  das Level angezeigt, kein Popup). Die Level-**Kurve** selbst ist unverändert (aus #3, provisorisch #16).
+- **Issue:** #5

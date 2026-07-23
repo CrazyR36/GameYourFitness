@@ -9,7 +9,13 @@ package com.gameyourfitness.app.domain.workout
  * Eingaben, die die Client-Validierung nicht abgefangen hat).
  */
 sealed interface LogWorkoutResult {
-    data class Success(val awardedXp: Long) : LogWorkoutResult
+    /**
+     * @param awardedXp vom Server vergebene EP.
+     * @param levelBefore serverseitig berechnetes Level vor der Vergabe.
+     * @param levelAfter serverseitig berechnetes Level nach der Vergabe;
+     *   `levelAfter > levelBefore` bedeutet Level-Up (#5).
+     */
+    data class Success(val awardedXp: Long, val levelBefore: Int, val levelAfter: Int) : LogWorkoutResult
 
     data object NetworkError : LogWorkoutResult
 
