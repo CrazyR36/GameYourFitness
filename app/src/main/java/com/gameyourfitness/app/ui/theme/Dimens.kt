@@ -15,4 +15,8 @@ object Dimens {
     val xpBarHeight = 14.dp
     val statSpacing = 12.dp
     val sectionSpacing = 20.dp
+
+    // Krafttraining-Popup (#4)
+    val formFieldSpacing = 12.dp
+    val fieldErrorSpacing = 4.dp
 }

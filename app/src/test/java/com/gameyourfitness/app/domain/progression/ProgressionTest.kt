@@ -88,6 +88,32 @@ class ProgressionTest {
     }
 
     @Test
+    fun `strengthWorkoutXp folgt der bestaetigungsfaehigen ersten Version`() {
+        // saetze * wdh * (100 + gewicht) / 100 (Ganzzahl).
+        assertEquals(40L, Progression.strengthWorkoutXp(sets = 5, reps = 5, weightKg = 60))
+        // 0 kg = reines Volumen (Koerpergewicht).
+        assertEquals(30L, Progression.strengthWorkoutXp(sets = 3, reps = 10, weightKg = 0))
+        // Gewicht 100 kg verdoppelt das Volumen.
+        assertEquals(60L, Progression.strengthWorkoutXp(sets = 3, reps = 10, weightKg = 100))
+        // Ganzzahl-Division schneidet ab (1*1*(100+50)/100 = 1).
+        assertEquals(1L, Progression.strengthWorkoutXp(sets = 1, reps = 1, weightKg = 50))
+        assertEquals(0L, Progression.strengthWorkoutXp(sets = 0, reps = 0, weightKg = 0))
+    }
+
+    @Test
+    fun `strengthWorkoutXp hebt negative Eingaben defensiv auf 0`() {
+        assertEquals(0L, Progression.strengthWorkoutXp(sets = -5, reps = 10, weightKg = 20))
+        assertEquals(0L, Progression.strengthWorkoutXp(sets = 5, reps = -3, weightKg = 20))
+        // Negatives Gewicht wird auf 0 gehoben → reines Volumen, nie negative EP.
+        assertEquals(25L, Progression.strengthWorkoutXp(sets = 5, reps = 5, weightKg = -80))
+    }
+
+    @Test
+    fun `STR-Zuwachs je Krafttraining ist die bestaetigungsfaehige erste Version`() {
+        assertEquals(1, Progression.STRENGTH_STAT_GAIN_PER_WORKOUT)
+    }
+
+    @Test
     fun `Rang-Schwellen sind die bestaetigte erste Version und steigen streng monoton`() {
         assertEquals(1, Progression.minLevelForRank(Rank.E))
         assertEquals(5, Progression.minLevelForRank(Rank.D))

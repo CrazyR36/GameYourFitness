@@ -30,6 +30,15 @@ object Progression {
     /** Basis-EP der Levelstufe; Stufe L→L+1 kostet [XP_STEP_PER_LEVEL] * L EP. */
     const val XP_STEP_PER_LEVEL: Long = 100L
 
+    /**
+     * Nenner der Gewichts-Skalierung in [strengthWorkoutXp]: 0 kg ⇒ Faktor 1,0 (reines
+     * Volumen), je [WEIGHT_XP_DIVISOR] kg wächst der Faktor um 1,0.
+     */
+    const val WEIGHT_XP_DIVISOR: Long = 100L
+
+    /** STR-Zuwachs je erfasstem Krafttraining (erste Version, Issue #4 — flach). */
+    const val STRENGTH_STAT_GAIN_PER_WORKOUT: Int = 1
+
     /** Startlevel eines neuen Charakters (0 EP). */
     const val START_LEVEL: Int = 1
 
@@ -80,6 +89,22 @@ object Progression {
         val into = safeXp - currentBase
         val fraction = if (span <= 0L) 0f else (into.toFloat() / span.toFloat()).coerceIn(0f, 1f)
         return LevelProgress(level = level, xpIntoLevel = into, xpForLevel = span, fractionToNextLevel = fraction)
+    }
+
+    /**
+     * EP für ein Krafttraining (erste Version, Issue #4 — bestätigungspflichtig, #16).
+     * Reine Ganzzahl-Arithmetik: `sätze · wdh · (100 + gewicht) / 100`. 0 kg ⇒ reines
+     * Volumen (Körpergewicht). Diese Kotlin-Funktion und die SQL-Funktion
+     * `log_strength_workout` sind Spiegelbilder; der E2E-Test gleicht sie Ende-zu-Ende ab.
+     *
+     * Erwartet plausibilisierte Eingaben (siehe `StrengthWorkoutValidator`); negative
+     * Werte werden defensiv auf 0 gehoben, damit nie negative EP entstehen.
+     */
+    fun strengthWorkoutXp(sets: Int, reps: Int, weightKg: Int): Long {
+        val safeSets = sets.coerceAtLeast(0).toLong()
+        val safeReps = reps.coerceAtLeast(0).toLong()
+        val safeWeight = weightKg.coerceAtLeast(0).toLong()
+        return safeSets * safeReps * (WEIGHT_XP_DIVISOR + safeWeight) / WEIGHT_XP_DIVISOR
     }
 
     /**

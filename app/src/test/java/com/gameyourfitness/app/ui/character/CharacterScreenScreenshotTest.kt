@@ -43,7 +43,7 @@ class CharacterScreenScreenshotTest {
     private fun capture(name: String, darkTheme: Boolean, state: CharacterUiState) {
         composeRule.setContent {
             GameYourFitnessTheme(darkTheme = darkTheme) {
-                CharacterScreen(state = state, onRetry = {}, onSignOut = {})
+                CharacterScreen(state = state, onRetry = {}, onSignOut = {}, onLogWorkout = {})
             }
         }
         composeRule.onRoot().captureRoboImage("src/test/screenshots/$name.png")

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -41,6 +42,7 @@ fun CharacterScreen(
     state: CharacterUiState,
     onRetry: () -> Unit,
     onSignOut: () -> Unit,
+    onLogWorkout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -70,7 +72,7 @@ fun CharacterScreen(
 
             when (state) {
                 CharacterUiState.Loading -> LoadingBody()
-                is CharacterUiState.Content -> CharacterBody(state.character, state.progress)
+                is CharacterUiState.Content -> CharacterBody(state.character, state.progress, onLogWorkout)
                 CharacterUiState.Empty -> EmptyBody()
                 is CharacterUiState.Error -> ErrorBody(state, onRetry)
             }
@@ -140,7 +142,7 @@ private fun ErrorBody(state: CharacterUiState.Error, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun CharacterBody(character: Character, progress: LevelProgress) {
+private fun CharacterBody(character: Character, progress: LevelProgress, onLogWorkout: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Dimens.sectionSpacing)
@@ -173,6 +175,17 @@ private fun CharacterBody(character: Character, progress: LevelProgress) {
             StatRow(R.string.character_stat_vit, character.stats.vitality, "character_stat_vit")
             StatRow(R.string.character_stat_agi, character.stats.agility, "character_stat_agi")
             StatRow(R.string.character_stat_per, character.stats.perception, "character_stat_per")
+        }
+
+        val logWorkoutLabel = stringResource(R.string.character_log_workout)
+        Button(
+            onClick = onLogWorkout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("character_log_workout")
+                .semantics { contentDescription = logWorkoutLabel }
+        ) {
+            Text(text = logWorkoutLabel)
         }
     }
 }
