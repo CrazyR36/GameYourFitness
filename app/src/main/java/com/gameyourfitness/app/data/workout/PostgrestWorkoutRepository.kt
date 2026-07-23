@@ -24,7 +24,11 @@ class PostgrestWorkoutRepository @Inject constructor(
         val session = sessionStore.load() ?: return LogWorkoutResult.Failed
         return try {
             val response = workoutApi.logStrengthWorkout(session.accessToken, workout.toRequest())
-            LogWorkoutResult.Success(response.xpAwarded)
+            LogWorkoutResult.Success(
+                awardedXp = response.xpAwarded,
+                levelBefore = response.levelBefore,
+                levelAfter = response.levelAfter
+            )
         } catch (_: IOException) {
             LogWorkoutResult.NetworkError
         } catch (_: PostgrestHttpException) {

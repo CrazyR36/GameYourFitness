@@ -29,7 +29,11 @@ sealed interface WorkoutLogUiState {
 
     data class Error(@StringRes val messageRes: Int) : WorkoutLogUiState
 
-    data object Success : WorkoutLogUiState
+    /**
+     * Erfassen erfolgreich. [leveledUp] gibt an, ob der Server einen Level-Aufstieg
+     * erkannt hat; [newLevel] ist das (neue) Level nach der Vergabe (#5).
+     */
+    data class Success(val leveledUp: Boolean, val newLevel: Int) : WorkoutLogUiState
 }
 
 @HiltViewModel
@@ -41,8 +45,12 @@ class WorkoutLogViewModel @Inject constructor(private val workoutRepository: Wor
         if (_uiState.value is WorkoutLogUiState.Submitting) return
         _uiState.value = WorkoutLogUiState.Submitting
         viewModelScope.launch {
-            _uiState.value = when (workoutRepository.logStrengthWorkout(workout)) {
-                is LogWorkoutResult.Success -> WorkoutLogUiState.Success
+            _uiState.value = when (val result = workoutRepository.logStrengthWorkout(workout)) {
+                is LogWorkoutResult.Success -> WorkoutLogUiState.Success(
+                    leveledUp = result.levelAfter > result.levelBefore,
+                    newLevel = result.levelAfter
+                )
+
                 LogWorkoutResult.NetworkError -> WorkoutLogUiState.Error(R.string.workout_submit_error_network)
                 LogWorkoutResult.Failed -> WorkoutLogUiState.Error(R.string.workout_submit_error_generic)
             }

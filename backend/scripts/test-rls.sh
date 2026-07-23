@@ -147,6 +147,13 @@ awarded="$(echo "$rpc_resp" | jq -r '.xp_awarded')"
 [ "$awarded" = "40" ] || fail "RPC vergab nicht 40 EP (5*5*(100+60)/100): $rpc_resp"
 pass "RPC log_strength_workout vergibt serverseitig 40 EP"
 
+# Slice #5: die RPC liefert das serverseitig berechnete Level vor/nach der Vergabe.
+lb="$(echo "$rpc_resp" | jq -r '.level_before')"
+la="$(echo "$rpc_resp" | jq -r '.level_after')"
+[ "$lb" = "1" ] && [ "$la" = "1" ] ||
+    fail "level_before/level_after falsch (=$lb/$la, erwartet 1/1 bei 40 EP): $rpc_resp"
+pass "RPC liefert level_before=1/level_after=1 (kein Aufstieg bei 40 EP)"
+
 rows="$(auth_get "$TOKEN_A" "?select=total_xp,strength")"
 xp="$(echo "$rows" | jq -r '.[0].total_xp')"
 str="$(echo "$rows" | jq -r '.[0].strength')"
@@ -174,11 +181,39 @@ xp="$(auth_get "$TOKEN_A" "?select=total_xp" | jq -r '.[0].total_xp')"
 [ "$xp" = "40" ] || fail "total_xp nach abgelehntem Training veraendert (=$xp, erwartet 40)"
 pass "Abgelehntes Training liess total_xp unveraendert (40)"
 
+# 9b) Slice #5: ein zweites Training hebt A ueber die Schwelle → serverseitiges Level-Up.
+#     3x20 @ 0 kg = 60 EP → total_xp 40+60 = 100 → Level 1 → 2 (xp_to_reach_level(2)=100).
+rpc_resp="$(curl -s -X POST "$BASE_URL/rest/v1/rpc/log_strength_workout" \
+    -H "apikey: $ANON_KEY" -H "Authorization: Bearer $TOKEN_A" -H "Content-Type: application/json" \
+    -d '{"p_exercise":"Kniebeuge","p_sets":3,"p_reps":20,"p_weight_kg":0}')"
+lb="$(echo "$rpc_resp" | jq -r '.level_before')"
+la="$(echo "$rpc_resp" | jq -r '.level_after')"
+tot="$(echo "$rpc_resp" | jq -r '.total_xp')"
+[ "$tot" = "100" ] || fail "total_xp nach zweitem Training falsch (=$tot, erwartet 100): $rpc_resp"
+[ "$lb" = "1" ] && [ "$la" = "2" ] ||
+    fail "Level-Up nicht erkannt (level_before/after=$lb/$la, erwartet 1/2): $rpc_resp"
+pass "Serverseitiges Level-Up erkannt: 100 EP → level_before=1, level_after=2"
+
 # 10) B kann A's Trainings/EP-Events nicht lesen (RLS-select-own).
 w="$(auth_get_table "$TOKEN_B" strength_workouts "?user_id=eq.$UID_A")"
 [ "$(echo "$w" | array_len)" = "0" ] || fail "B konnte A's Trainings lesen: $w"
 e="$(auth_get_table "$TOKEN_B" xp_events "?user_id=eq.$UID_A")"
 [ "$(echo "$e" | array_len)" = "0" ] || fail "B konnte A's EP-Events lesen: $e"
 pass "B kann A's Trainings/EP-Events nicht lesen (RLS-select blockiert)"
+
+# 11) Slice #5: die SQL-Level-Kurve muss der Kotlin-Kurve (Progression) entsprechen.
+#     Gleiche Grenzwerte wie ProgressionTest — der einzige ehrliche SQL↔Kotlin-Abgleich.
+COMPOSE_FILE="${COMPOSE_FILE:-backend/docker-compose.yml}"
+psql_level() {
+    docker compose -f "$COMPOSE_FILE" exec -T db \
+        psql -U postgres -d postgres -tAc "select public.level_for_xp($1)" | tr -d '[:space:]'
+}
+for pair in "0:1" "99:1" "100:2" "299:2" "300:3" "999:4" "1000:5" "4499:9" "4500:10"; do
+    xp="${pair%%:*}"
+    exp="${pair##*:}"
+    got="$(psql_level "$xp")"
+    [ "$got" = "$exp" ] || fail "level_for_xp($xp)=$got, erwartet $exp (SQL-Kurve != Kotlin-Kurve)"
+done
+pass "SQL-Level-Kurve stimmt mit der Kotlin-Kurve ueberein (Grenzwerte 0/99/100/300/1000/4500)"
 
 echo "✅ Alle RLS-Negativtests bestanden."
