@@ -291,3 +291,64 @@ Konsequenzen, Issue-Referenz.
   Normalfall; abgelaufener Token → Fehlerzustand mit Retry). Navigation-Compose kommt mit dem ersten
   echten Mehrfachziel.
 - **Issue:** #3
+
+## 2026-07-23 — EP-Vergabe fürs Krafttraining serverseitig als RPC + Audit-Trail
+
+- **Entscheidung:** Das Erfassen eines Krafttrainings läuft über EINE `security definer`-Postgres-Funktion
+  `log_strength_workout(exercise, sets, reps, weight)`. Sie validiert, schreibt die Trainingszeile
+  (`strength_workouts`) **und** einen EP-Event-Eintrag (`xp_events`: `source`/`xp_amount`/`ref_id`) und
+  erhöht `profiles.total_xp`/`strength` — alles in einer Transaktion. Beide Tabellen sind **client-read-only**
+  (RLS select-own, Grants an `anon`/`authenticated` erst `revoke`, dann nur `select`). Der Client ruft die
+  RPC per PostgREST auf und liest danach den Charakter neu.
+- **Alternativen:** EP im Client berechnen und `total_xp` per Client-`PATCH` schreiben; Trigger auf einer
+  client-beschreibbaren `workouts`-Tabelle; getrennte RPCs für Insert und EP.
+- **Begründung:** EP/Stats dürfen nie client-schreibbar sein (CLAUDE.md 6/8); die einzige Schreibstelle ist
+  die Funktion. Der generische `xp_events`-Audit-Trail (statt nur einer Summe) ist die Grundlage für die
+  Diagramme (#11) und macht jede EP-Vergabe nachvollziehbar. Eine Funktion garantiert Atomarität
+  (Training + Event + Summe konsistent). Handgeschriebener PostgREST-RPC-Client (kein SDK) wie bei
+  GoTrue/Character (DECISIONS 2026-07-21).
+- **Konsequenzen:** Muster für alle künftigen EP-Quellen (Quests #6, Schritte #7, Läufe #8): je eine
+  `security definer`-RPC, die `xp_events` schreibt. `xp_events` ist bewusst generisch, damit neue Quellen
+  keine neue Buchführung brauchen. Die Default-Grants-Falle (DECISIONS 2026-07-21) gilt auch hier; der
+  RLS-Negativtest prüft Client-INSERT-Verbot, Fremd-Lese-Verbot und den RPC-Weg (EP/Audit/Ablehnung).
+- **Issue:** #4
+
+## 2026-07-23 — EP-Formel Krafttraining + STR-Zuwachs (erste Version, provisorisch)
+
+- **Entscheidung:** EP je Krafttraining = `sätze · wdh · (100 + gewicht_kg) / 100` (Ganzzahl); 0 kg = reines
+  Volumen. STR-Zuwachs = **+1 pro erfasstem Training** (flach). Beides liegt zentral in
+  `domain/progression/Progression.kt` (`strengthWorkoutXp`, `STRENGTH_STAT_GAIN_PER_WORKOUT`) **und** ist in
+  der SQL-Funktion gespiegelt. Der E2E-Test gleicht Kotlin- und SQL-Formel Ende-zu-Ende ab (40 EP für
+  5×5 @ 60 kg).
+- **Alternativen:** STR skaliert mit Volumen/EP; multiplikative Gewichtskurve; EP nur aus Volumen ohne
+  Gewicht.
+- **Begründung:** Quadratisch in „Arbeit" (Volumen×Gewicht), ganzzahlig exakt, transparent. STR bewusst
+  flach: die Intensität steckt bereits in den EP (und damit im Level) — STR ist der langsame „du wirst
+  stärker"-Zähler, kein zweites Volumenmaß. Provisorisch wie die Levelkurve (#3), an einer Stelle als
+  Konstante, ohne Code-Umbau änderbar.
+- **Konsequenzen:** Spielregel (CLAUDE.md 6/10) → provisorisch, dem Nutzer vorgelegt und in das
+  Balancing-Tracking-Issue **#16** aufgenommen. Für #5 (Level-Up serverseitig) ist die EP-Kurve ohnehin in
+  SQL zu spiegeln; die Workout-EP-Funktion ist bereits das erste SQL/Kotlin-Spiegelpaar. Anti-Cheat
+  „maximale Steigerungsrate pro Woche" braucht Trainingshistorie → spätere Verfeinerung (Kandidat #11/#16);
+  die absoluten Plausibilitätsgrenzen decken #4 ab.
+- **Issue:** #4 (Feinbalancing: #16)
+
+## 2026-07-23 — Krafttraining-Erfassung als Popup (kein Navigation-Library), zwei ViewModels
+
+- **Entscheidung:** Das Erfassen ist ein „System-Fenster"-Popup (`Dialog`) über dem Charakterbildschirm,
+  kein eigenes Navigationsziel. Eigener `WorkoutLogViewModel` (genau ein `StateFlow`) für den Absende-Status;
+  `CharacterRoute` hostet beide ViewModels und lädt nach `Success` denselben Charakter neu. Die Feldwerte
+  sind lokaler Compose-State im Formular; die Feldvalidierung ist eine **reine Domänenfunktion**
+  `StrengthWorkoutValidator` (framework-frei, ohne `R`), deren Grenzen die SQL-CHECK-Constraints spiegeln.
+- **Alternativen:** Navigation-Compose einführen (in #2/#3 als „erstes Mehrfachziel" avisiert); den
+  Workout-Status in `CharacterUiState` falten (eine VM); Validierung im ViewModel/Composable.
+- **Begründung:** Es gibt weiterhin kein echtes Navigationsziel mit Backstack — ein Popup passt zum
+  „System-Fenster"-Design und macht „EP-Balken aktualisiert sich" trivial (dieselbe `CharacterViewModel`-
+  Instanz lädt neu; kein Cross-VM-Result-Passing/Nav-Reload nötig). Zwei kleine VMs mit je einem `StateFlow`
+  halten die „ein StateFlow pro Screen/Popup"-Regel sauberer als eine überladene VM. Navigation-Compose
+  bleibt Vorratsarbeit, bis ein echtes drittes Ziel entsteht.
+- **Konsequenzen:** `WorkoutLogUiState.Success` ist ein kurzlebiger Zustand, den `CharacterRoute` per
+  `LaunchedEffect` konsumiert (reload + schließen + `reset()`); nach `reset()` steht wieder `Idle`, daher
+  kein Re-Trigger. Sollte später ein echter Screen-Wechsel nötig werden (Historie, Quests-Screen), wird
+  Navigation-Compose eingeführt und das Popup-Muster bleibt für Formulare bestehen.
+- **Issue:** #4

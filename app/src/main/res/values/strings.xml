@@ -23,4 +23,21 @@
     <string name="character_error_network">Keine Verbindung zum Server. Prüfe deine Internetverbindung.</string>
     <string name="character_error_generic">Charakter konnte nicht geladen werden. Bitte versuche es erneut.</string>
     <string name="character_retry">Erneut versuchen</string>
+    <string name="character_log_workout">Krafttraining erfassen</string>
+
+    <string name="workout_title">KRAFTTRAINING</string>
+    <string name="workout_field_exercise">Übung</string>
+    <string name="workout_field_sets">Sätze</string>
+    <string name="workout_field_reps">Wiederholungen</string>
+    <string name="workout_field_weight">Gewicht (kg)</string>
+    <string name="workout_submit">Erfassen</string>
+    <string name="workout_cancel">Abbrechen</string>
+    <string name="workout_error_exercise_blank">Bitte gib eine Übung an.</string>
+    <string name="workout_error_exercise_too_long">Übungsname ist zu lang (max. 60 Zeichen).</string>
+    <string name="workout_error_not_a_number">Bitte gib eine ganze Zahl ein.</string>
+    <string name="workout_error_sets_range">Sätze müssen zwischen 1 und 20 liegen.</string>
+    <string name="workout_error_reps_range">Wiederholungen müssen zwischen 1 und 100 liegen.</string>
+    <string name="workout_error_weight_range">Gewicht muss zwischen 0 und 500 kg liegen.</string>
+    <string name="workout_submit_error_network">Keine Verbindung zum Server. Deine Eingaben bleiben erhalten.</string>
+    <string name="workout_submit_error_generic">Training konnte nicht erfasst werden. Bitte versuche es erneut.</string>
 </resources>

@@ -17,3 +17,8 @@ complexity:
   LongMethod:
     ignoreAnnotated:
       - 'Composable'
+  LongParameterList:
+    # Stateless Composables bekommen State + Callbacks als Parameter (CLAUDE.md 5/7);
+    # Formulare mit mehreren Feldern haben dadurch idiomatisch viele Parameter.
+    ignoreAnnotated:
+      - 'Composable'

@@ -41,6 +41,9 @@ class CharacterViewModel @Inject constructor(private val characterRepository: Ch
 
     fun onRetry() = load()
 
+    /** Lädt den Charakter neu — z. B. nachdem ein Krafttraining EP vergeben hat (#4). */
+    fun reload() = load()
+
     private fun load() {
         _uiState.value = CharacterUiState.Loading
         viewModelScope.launch {
