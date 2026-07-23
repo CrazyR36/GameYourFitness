@@ -275,6 +275,12 @@ um zu verstehen, was passiert ist.
 GitHub Actions läuft bei jedem Push: Build, ktlint, detekt, Unit-Tests, E2E-Tests auf Emulator,
 Screenshot-Tests. **Roter Build wird nie gemergt und nie ignoriert.**
 
+> **detekt prüft auch die Testquellen.** Die Compose-Ausnahmen (`LongMethod`/`LongParameterList`
+> via `ignoreAnnotated: Composable` in `config/detekt/detekt.yml`) greifen nur für
+> `@Composable`-annotierte Funktionen. Test-Hilfsfunktionen mit vielen Parametern (z. B.
+> `capture(...)` in Screenshot-Tests) müssen selbst schlank bleiben — Content als
+> `@Composable`-Lambda übergeben, statt jeder Variante einen eigenen Parameter zu geben.
+
 ---
 
 ## 5. Architekturregeln
