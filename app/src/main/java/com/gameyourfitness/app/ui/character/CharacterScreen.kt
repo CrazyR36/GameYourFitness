@@ -60,17 +60,16 @@ fun CharacterScreen(
         modifier = modifier
             .fillMaxSize()
             .atmosphericBackground()
-            .testTag("character_screen"),
-        contentAlignment = Alignment.Center
+            .testTag("character_screen")
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(Dimens.screenPadding)
                 .systemWindow()
                 .padding(Dimens.systemWindowPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.sectionSpacing)
+            verticalArrangement = Arrangement.spacedBy(Dimens.sectionSpacing, Alignment.CenterVertically)
         ) {
             Text(
                 text = stringResource(R.string.character_title),
