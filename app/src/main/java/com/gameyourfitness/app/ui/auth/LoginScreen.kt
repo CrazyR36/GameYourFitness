@@ -41,17 +41,16 @@ fun LoginScreen(
         modifier = modifier
             .fillMaxSize()
             .atmosphericBackground()
-            .testTag("login_screen"),
-        contentAlignment = Alignment.Center
+            .testTag("login_screen")
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(Dimens.screenPadding)
                 .systemWindow()
                 .padding(Dimens.systemWindowPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing)
+            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing, Alignment.CenterVertically)
         ) {
             Text(
                 text = stringResource(R.string.login_title),

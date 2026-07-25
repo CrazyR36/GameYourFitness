@@ -48,8 +48,13 @@ Composable erfunden.
 
 ## Das „System-Fenster" — kanonisches Grundgerüst
 
-Jeder Vollbild-Zustand ist ein zentriertes Fenster mit Glow-Rahmen. Real umgesetzt in
-`ui/auth/LoginScreen.kt` und `ui/home/HomeScreen.kt` — daran halten:
+Jeder **Vollbild**-Screen ist ein Glow-Rahmen-Fenster, das die **volle Breite und volle Höhe**
+nutzt (echtes HUD-Panel, nicht ein kleines schwebendes Kästchen) — mit **immer etwas Abstand
+zum Rahmen**: `screenPadding` außen (Luft für den Glow bis zum Bildschirmrand) und
+`systemWindowPadding` innen (Inhalt berührt nie den Rahmen). Inhalt wird als Gruppe **vertikal
+zentriert** (`Arrangement.spacedBy(..., Alignment.CenterVertically)`), damit auch bei wenig
+Inhalt oben und unten gleichmäßig Platz zum Rahmen bleibt. Real umgesetzt in
+`ui/auth/LoginScreen.kt` und `ui/character/CharacterScreen.kt` — daran halten:
 
 ```kotlin
 @Composable
@@ -57,18 +62,17 @@ fun ExampleScreen(state: UiState, onAction: () -> Unit, modifier: Modifier = Mod
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .testTag("example_screen"),
-        contentAlignment = Alignment.Center
+            .atmosphericBackground()          // radialer Backdrop-Glow (ui/theme/SystemWindow.kt)
+            .testTag("example_screen")
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimens.screenPadding)
-                .border(Dimens.systemWindowBorder, MaterialTheme.colorScheme.primary)
-                .padding(Dimens.systemWindowPadding),
+                .fillMaxSize()                 // volle Breite UND Höhe
+                .padding(Dimens.screenPadding) // Abstand zum Bildschirmrand (Glow-Raum)
+                .systemWindow()                // Glow-Schatten + Surface-Füllung + Gradient-Rand
+                .padding(Dimens.systemWindowPadding), // Abstand Inhalt ↔ Rahmen (nie berühren)
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing)
+            verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing, Alignment.CenterVertically)
         ) {
             Text(
                 text = stringResource(R.string.example_title),
@@ -77,16 +81,25 @@ fun ExampleScreen(state: UiState, onAction: () -> Unit, modifier: Modifier = Mod
                 textAlign = TextAlign.Center,
                 modifier = Modifier.testTag("example_title")
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
+            SystemDivider()                    // Gradient-Naht (ui/theme/SystemWindow.kt)
             // Inhalt je Zustand (siehe unten)
         }
     }
 }
 ```
 
-Popups (Level-Up, Rang-Aufstieg) verwenden denselben Rahmen-Look mit Ein-/Ausblende-
-Animation — die Animation muss über deaktivierbare Animationen/`AnimationTestRule` testbar
-bleiben.
+`Modifier.systemWindow()`, `Modifier.atmosphericBackground()` und `SystemDivider` liegen in
+`ui/theme/SystemWindow.kt`; Ecken/Bewegung/Deckkraft als Token in `Shapes.kt`/`Motion.kt`/`Alpha`.
+
+Popups (Level-Up, Rang-Aufstieg, Formulare im Dialog) sind bewusst **inhaltsgroß** statt
+vollflächig: `fillMaxWidth().systemWindow().padding(systemWindowPadding)`, mit denselben
+Abständen zum Rahmen und Ein-/Ausblende-Animation — die Animation muss über deaktivierbare
+Animationen/`AnimationTestRule` testbar bleiben.
+
+> **Screenshot-Höhe:** Ein Vollbild-Screen kann höher als das 320×470dp-Default-Testgerät sein
+> und würde am unteren Rand abgeschnitten. Dann im Screenshot-Test die Leinwand erhöhen
+> (`@Config(sdk = [35], qualifiers = "+h900dp")`), damit das Golden das ganze Fenster inkl.
+> aller Buttons zeigt. Auf echten Geräten passt der Screen (E2E belegt es).
 
 ## Pflichtregeln (werden im Review/Test geprüft)
 
