@@ -33,8 +33,11 @@ schärfen. Kommentiere die Schärfung am Issue.
 Nach Abschnitt 2 (Test First), Abschnitt 4 (Branch, Statuspflege, PR) und Abschnitt 5 (Architektur).
 
 **5. Abschließen**
-Definition of Done prüfen (Abschnitt 2), Retrospektive schreiben (Abschnitt 10), PR mit
-`Closes #<nr>`, dann **anhalten und berichten**. Beginne nie eigenmächtig den nächsten Slice.
+Bei jedem Slice mit neuem/geändertem Screen **zuerst** den Subagenten
+`styling-animation-reviewer` starten (Abschnitt 7) — er beurteilt, ob die Oberfläche wie ein
+modernes Spiel aussieht und animiert wirkt. Dann Definition of Done prüfen (Abschnitt 2),
+Retrospektive schreiben (Abschnitt 10), PR mit `Closes #<nr>`, dann **anhalten und berichten**.
+Beginne nie eigenmächtig den nächsten Slice.
 
 **Fragen stellst du am Anfang, nicht am Ende.** Wenn nach diesem Protokoll noch etwas unklar ist,
 frag — bevor du Code schreibst.
@@ -153,6 +156,9 @@ Ein Slice gilt nur als fertig, wenn **alle** Punkte erfüllt sind:
 - [ ] Mindestens ein E2E-Test deckt einen relevanten Fehlerfall ab
 - [ ] Unit-Tests für die Domänenlogik, sinnvolle Abdeckung (keine Zahlenfetischismus, aber keine Lücken bei Regeln/Formeln)
 - [ ] Screenshot-Test für neue/geänderte Screens (Light + Dark)
+- [ ] Bei neuem/geändertem Screen: Subagent `styling-animation-reviewer` gelaufen (Abschnitt 7),
+      sein Review am Issue vermerkt und die als sinnvoll bewerteten Punkte umgesetzt oder
+      begründet zurückgestellt (offene Punkte werden ggf. zu neuen Issues)
 - [ ] Bei neuen Tabellen/Spalten: RLS-Policy vorhanden **und** durch einen Test belegt, dass
       ein fremder Nutzer die Daten nicht lesen oder schreiben kann
 - [ ] Alle Tests grün, Build ohne Warnungen
@@ -322,6 +328,21 @@ Screenshot-Tests. **Roter Build wird nie gemergt und nie ignoriert.**
 - Jede Animation muss über `AnimationTestRule` bzw. deaktivierbare Animationen testbar bleiben
 - Barrierefreiheit: jedes interaktive Element hat `contentDescription`; Kontraste geprüft
 - Kein Screen ohne definierten Lade-, Leer- und Fehlerzustand — alle drei werden getestet
+
+### Design-Gate: Subagent `styling-animation-reviewer` — verpflichtend vor „fertig"
+
+Jeder Slice, der einen Screen neu baut oder ändert, wird **vor** der Definition of Done
+(Abschnitt 2) durch den Subagenten `styling-animation-reviewer` (`.claude/agents/`) geschickt.
+Er beurteilt als Art-Director/Motion-Designer, ob die Oberfläche wie ein modernes RPG-Videospiel
+aussieht und animiert wirkt (Tiefe/Glow, Motion, Typografie-Charakter, Feinschliff) — der
+`design-system`-Skill liefert ihm die Tokens.
+
+- Der Subagent läuft **read-only** und liefert ein priorisiertes Review; er ändert keinen Code.
+- Sein Review wird am Issue vermerkt. Die als sinnvoll bewerteten Punkte setzt du im selben
+  Slice um; was du bewusst zurückstellst, begründest du am Issue (größere gestalterische Ideen
+  werden zu neuen Issues, nie stille Zusatzfeatures — Abschnitt 9).
+- Erst danach gilt der Screen als abnahmefähig. Reine Backend-/Datenslices ohne UI-Änderung
+  sind ausgenommen.
 
 ---
 
