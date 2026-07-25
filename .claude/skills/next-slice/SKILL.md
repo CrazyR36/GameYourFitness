@@ -130,12 +130,23 @@ auf die CI (`.github/workflows/ci.yml`, Job `e2e`).
 
 ## Phase 5 — Abschließen
 
+**Zuerst — Design-Gate (Pflicht bei neuem/geändertem Screen):** Starte den Subagenten
+`styling-animation-reviewer` (`Agent` mit `subagent_type: "styling-animation-reviewer"`) auf
+die im Slice berührten Screens/Popups. Er urteilt als Art-Director/Motion-Designer, ob es wie
+ein modernes Spiel aussieht und animiert wirkt (CLAUDE.md Abschnitt 7). Sein Review am Issue
+vermerken (`add_issue_comment`), die sinnvollen Punkte im selben Slice umsetzen, den Rest
+begründet zurückstellen (größere Ideen → neues Issue, nie stilles Zusatzfeature). Reine
+Backend-/Datenslices ohne UI-Änderung überspringen dieses Gate. Läuft er, bevor die DoD-Häkchen
+gesetzt werden — nicht danach.
+
 Prüfe die **Definition of Done** (CLAUDE.md Abschnitt 2) Punkt für Punkt:
 
 - [ ] ≥ 1 E2E-Test deckt den Happy Path vollständig ab
 - [ ] ≥ 1 E2E-Test deckt einen relevanten Fehlerfall ab
 - [ ] Unit-Tests für die Domänenlogik (Regeln/Formeln lückenlos)
 - [ ] Screenshot-Test Light + Dark für neue/geänderte Screens
+- [ ] Bei neuem/geändertem Screen: `styling-animation-reviewer` gelaufen, Review am Issue,
+      Punkte umgesetzt oder begründet zurückgestellt
 - [ ] Bei neuen Tabellen/Spalten: RLS-Policy + Test, dass Fremdzugriff scheitert
 - [ ] Alle Tests grün, Build ohne Warnungen, `ktlint`/`detekt` sauber
 - [ ] Manuell auf Emulator geprüft und im Issue dokumentiert (bzw. CI-Nachweis)
