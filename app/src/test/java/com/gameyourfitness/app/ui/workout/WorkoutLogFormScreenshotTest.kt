@@ -29,7 +29,11 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35])
+// Hoehere Test-Leinwand als das 320x470dp-Default: das Formular (untereinander stehende
+// Buttons, in der Fehlervariante zusaetzliche Fehlertexte) ist hoeher als 470dp und wuerde
+// sonst am unteren Rand abgeschnitten. In der App scrollt das Formular; hier braucht der
+// Screenshot Platz, um beide Buttons vollstaendig zu zeigen.
+@Config(sdk = [35], qualifiers = "+h900dp")
 class WorkoutLogFormScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
