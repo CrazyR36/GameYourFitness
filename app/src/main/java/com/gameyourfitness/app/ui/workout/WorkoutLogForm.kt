@@ -2,7 +2,6 @@ package com.gameyourfitness.app.ui.workout
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -124,42 +123,39 @@ fun WorkoutLogForm(
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Dimens.formFieldSpacing)
+        // Buttons untereinander in voller Breite: die deutschen Labels ("Abbrechen",
+        // "Erfassen") passen nebeneinander (je halbe Breite) nicht einzeilig und brachen um.
+        val submitLabel = stringResource(R.string.workout_submit)
+        Button(
+            onClick = onSubmit,
+            enabled = !submitting,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("workout_submit")
+                .semantics { contentDescription = submitLabel }
         ) {
-            val cancelLabel = stringResource(R.string.workout_cancel)
-            OutlinedButton(
-                onClick = onCancel,
-                enabled = !submitting,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("workout_cancel")
-                    .semantics { contentDescription = cancelLabel }
-            ) {
-                Text(text = cancelLabel)
+            if (submitting) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = Dimens.progressStroke,
+                    modifier = Modifier
+                        .size(Dimens.inlineProgressSize)
+                        .testTag("workout_submitting")
+                )
+            } else {
+                Text(text = submitLabel)
             }
-            val submitLabel = stringResource(R.string.workout_submit)
-            Button(
-                onClick = onSubmit,
-                enabled = !submitting,
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("workout_submit")
-                    .semantics { contentDescription = submitLabel }
-            ) {
-                if (submitting) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = Dimens.progressStroke,
-                        modifier = Modifier
-                            .size(Dimens.inlineProgressSize)
-                            .testTag("workout_submitting")
-                    )
-                } else {
-                    Text(text = submitLabel)
-                }
-            }
+        }
+        val cancelLabel = stringResource(R.string.workout_cancel)
+        OutlinedButton(
+            onClick = onCancel,
+            enabled = !submitting,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("workout_cancel")
+                .semantics { contentDescription = cancelLabel }
+        ) {
+            Text(text = cancelLabel)
         }
     }
 }

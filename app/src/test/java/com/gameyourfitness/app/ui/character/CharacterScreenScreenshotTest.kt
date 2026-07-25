@@ -23,7 +23,10 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [35])
+// Hoehere Test-Leinwand als das 320x470dp-Default: der vollstaendige Charakterbildschirm
+// (bis zum Abmelden-Button) ist hoeher als 470dp und wuerde sonst am unteren Rand
+// abgeschnitten. Auf echten Geraeten passt er (E2E gruen); hier braucht der Screenshot Platz.
+@Config(sdk = [35], qualifiers = "+h900dp")
 class CharacterScreenScreenshotTest {
     @get:Rule
     val composeRule = createComposeRule()
