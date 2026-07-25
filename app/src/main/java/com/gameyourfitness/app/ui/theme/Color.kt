@@ -21,3 +21,15 @@ val DayCyan = Color(0xFF0E7490)
 val DayOnBackground = Color(0xFF141A2A)
 val DayOnSurface = Color(0xFF232B40)
 val DayAlertRed = Color(0xFFB3213C)
+
+/**
+ * Deckkraft-Token (keine Magic Numbers in Composables). Der Glow des atmosphaerischen
+ * Hintergrunds ist auf Dunkel gerechnet und im Light-Theme deutlich dezenter, damit es
+ * nicht schmutzig wirkt; die Umschaltung erfolgt ueber die Hintergrund-Helligkeit.
+ */
+object Alpha {
+    const val SCRIM = 0.72f
+    const val BACKDROP_GLOW_DARK = 0.12f
+    const val BACKDROP_GLOW_LIGHT = 0.05f
+    const val DARK_LUMINANCE_THRESHOLD = 0.5f
+}

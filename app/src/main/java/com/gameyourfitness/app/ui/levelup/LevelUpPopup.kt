@@ -1,11 +1,14 @@
 package com.gameyourfitness.app.ui.levelup
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,14 +32,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.gameyourfitness.app.R
 import com.gameyourfitness.app.domain.progression.Progression
+import com.gameyourfitness.app.ui.theme.Alpha
 import com.gameyourfitness.app.ui.theme.Dimens
-
-// Deckkraft des abdunkelnden Hintergrunds hinter dem Popup (UI-Token, keine Magic Number).
-private const val SCRIM_ALPHA = 0.72f
+import com.gameyourfitness.app.ui.theme.Motion
+import com.gameyourfitness.app.ui.theme.SystemDivider
+import com.gameyourfitness.app.ui.theme.systemWindow
 
 /**
  * Animiertes „System-Fenster"-Overlay für den Level-Aufstieg (#5). Blendet über
- * [AnimatedVisibility] ein/aus (auf dem CI-Emulator sind Animationen deaktiviert → testbar).
+ * [AnimatedVisibility] ein/aus: Einblenden mit Feder-Overshoot (Belohnungsgefühl statt
+ * Dialog), Ausblenden zurückskalierend. Auf dem CI-Emulator sind Animationen deaktiviert und
+ * beim initialen `visible = true` läuft keine Enter-Animation → testbar/deterministisch.
  * [level] `null` = ausgeblendet; beim Ausblenden zeigt das Popup weiterhin das zuletzt
  * erreichte Level, damit die Exit-Animation nicht auf eine leere Zahl springt.
  */
@@ -50,16 +55,20 @@ fun LevelUpOverlay(level: Int?, onDismiss: () -> Unit, modifier: Modifier = Modi
     if (level != null && level != lastLevel) {
         lastLevel = level
     }
+    val enterPop = scaleIn(
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        initialScale = Motion.POPUP_INITIAL_SCALE
+    )
     AnimatedVisibility(
         visible = level != null,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut(),
+        enter = fadeIn(tween(Motion.POPUP_IN_MS)) + enterPop,
+        exit = fadeOut(tween(Motion.POPUP_OUT_MS)) + scaleOut(targetScale = Motion.POPUP_EXIT_SCALE),
         modifier = modifier
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = SCRIM_ALPHA))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.SCRIM))
                 .testTag("level_up_overlay"),
             contentAlignment = Alignment.Center
         ) {
@@ -79,8 +88,7 @@ fun LevelUpPopup(level: Int, onDismiss: () -> Unit, modifier: Modifier = Modifie
         modifier = modifier
             .fillMaxWidth()
             .padding(Dimens.screenPadding)
-            .background(MaterialTheme.colorScheme.background)
-            .border(Dimens.systemWindowBorder, MaterialTheme.colorScheme.primary)
+            .systemWindow()
             .padding(Dimens.systemWindowPadding)
             .testTag("level_up_popup")
             .semantics { contentDescription = description },
@@ -96,7 +104,7 @@ fun LevelUpPopup(level: Int, onDismiss: () -> Unit, modifier: Modifier = Modifie
                 .fillMaxWidth()
                 .testTag("level_up_title")
         )
-        HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
+        SystemDivider()
         Text(
             text = stringResource(R.string.character_level_label),
             style = MaterialTheme.typography.labelLarge,

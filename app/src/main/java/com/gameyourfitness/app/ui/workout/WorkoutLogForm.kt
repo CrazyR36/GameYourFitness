@@ -1,7 +1,5 @@
 package com.gameyourfitness.app.ui.workout
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +27,8 @@ import com.gameyourfitness.app.R
 import com.gameyourfitness.app.domain.workout.WorkoutFieldErrors
 import com.gameyourfitness.app.domain.workout.WorkoutInputError
 import com.gameyourfitness.app.ui.theme.Dimens
+import com.gameyourfitness.app.ui.theme.SystemDivider
+import com.gameyourfitness.app.ui.theme.systemWindow
 
 /**
  * „System-Fenster"-Formular zum Erfassen eines Krafttrainings. Stateless: bekommt Werte
@@ -57,8 +56,7 @@ fun WorkoutLogForm(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .border(Dimens.systemWindowBorder, MaterialTheme.colorScheme.primary)
+            .systemWindow()
             .verticalScroll(rememberScrollState())
             .padding(Dimens.systemWindowPadding)
             .testTag("workout_form"),
@@ -73,7 +71,7 @@ fun WorkoutLogForm(
                 .fillMaxWidth()
                 .testTag("workout_title")
         )
-        HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
+        SystemDivider()
 
         LabeledField(
             value = exercise,

@@ -1,8 +1,6 @@
 package com.gameyourfitness.app.ui.auth
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +22,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.gameyourfitness.app.R
 import com.gameyourfitness.app.ui.theme.Dimens
+import com.gameyourfitness.app.ui.theme.SystemDivider
+import com.gameyourfitness.app.ui.theme.atmosphericBackground
+import com.gameyourfitness.app.ui.theme.systemWindow
 
 /**
  * Login-Screen im "System-Fenster"-Stil. Stateless: bekommt State + Callback,
@@ -40,7 +40,7 @@ fun LoginScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .atmosphericBackground()
             .testTag("login_screen"),
         contentAlignment = Alignment.Center
     ) {
@@ -48,7 +48,7 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(Dimens.screenPadding)
-                .border(Dimens.systemWindowBorder, MaterialTheme.colorScheme.primary)
+                .systemWindow()
                 .padding(Dimens.systemWindowPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(Dimens.contentSpacing)
@@ -60,7 +60,7 @@ fun LoginScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.testTag("login_title")
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.secondary)
+            SystemDivider()
             Text(
                 text = stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyLarge,

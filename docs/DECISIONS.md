@@ -375,3 +375,29 @@ Konsequenzen, Issue-Referenz.
   auf dem CI-Emulator deaktivierten Animationen testbar; das Popup ist transient (nach App-Neustart wird nur
   das Level angezeigt, kein Popup). Die Level-**Kurve** selbst ist unverändert (aus #3, provisorisch #16).
 - **Issue:** #5
+
+## 2026-07-25 — Visuelle Anhebung „modernes Spiel": Glow-System-Fenster & abgeschrägte Ecken
+
+- **Entscheidung:** Das Aussehen wird von „technisches Wireframe" auf „RPG-HUD" gehoben, mit
+  zentralen Design-Primitives statt Einzeleingriffen: `Modifier.systemWindow()` (Glow-Schatten +
+  Surface-Fuellung + Gradient-Rand), `Modifier.atmosphericBackground()` (radialer Backdrop-Glow),
+  `SystemDivider` (Gradient-Naht). Ecken-Sprache: **abgeschraegt** (`CutCornerShape`), System-Fenster
+  bewusst asymmetrisch (oben-links/unten-rechts) — zentral in `ui/theme/Shapes.kt`. Neue Token-Dateien
+  `Shapes.kt`, `Motion.kt` und ein `Alpha`-Objekt; alle Effekt-Werte sind Tokens, keine Literale.
+- **Alternativen:** Leicht gerundete Ecken (`RoundedCornerShape`); pro Screen einzeln stylen ohne
+  gemeinsame Modifier; sofort animierte Idle-Effekte (pulsierender Glow) einbauen.
+- **Begruendung:** Abgeschraegte Ecken treffen die „System-Interface"-Anmutung moderner Spiele
+  (Sci-Fi/HUD) und decken sich mit CLAUDE.md Abschnitt 7 („kantige, technische Typografie") besser als
+  Rundung. Gemeinsame Modifier halten den Look aus **einer** Quelle (Abschnitt 5/7) und vermeiden, dass
+  jeder Screen den Glow neu erfindet. Bewusst **keine** Endlos-/Idle-Animation: alle Bewegungen
+  (`animateFloatAsState` EP-Balken, `AnimatedContent` Zustandswechsel, Feder-Overshoot im Level-Up-Popup)
+  laufen in ihren Zielwert und settlen, damit Screenshot-Tests deterministisch bleiben.
+- **Konsequenzen:** Die System-Fenster fuellen jetzt `surface` (vorher transparent auf `background`);
+  der EP-Balken-Track nutzt daher `background` statt `surface`, um sichtbar zu bleiben. Count-up-Animation
+  und Button-Press-Scale wurden bewusst zurueckgestellt: Count-up wuerde die harten `assertTextEquals`
+  auf `character_level`/`level_up_level`/Stats mit Zwischenwerten brechen; Press-Scale ist ohne
+  Screenshot-Nutzen und wird als Follow-up-Quick-Win gefuehrt. Idle-Effekte (Partikel/Scanlines) und eine
+  gebundelte Game-Font bleiben eigene, noch offene Design-Fragen. Alle Screenshot-Goldens wurden
+  neu aufgenommen (geaenderter Look auf jedem Screen).
+- **Ausloeser:** Review des Subagenten `styling-animation-reviewer` (Design-Gate, CLAUDE.md Abschnitt 7).
+- **Issue:** —  (Tooling-/Design-Durchgang auf `claude/styling-animation-subagent-vf1ixy`)
