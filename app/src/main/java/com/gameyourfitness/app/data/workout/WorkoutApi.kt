@@ -30,13 +30,14 @@ data class LogWorkoutRequest(
 )
 
 /**
- * Rückgabe der SQL-Funktion: vom Server vergebene EP, neuer EP-Stand sowie das
- * serverseitig berechnete Level VOR und NACH der Vergabe (Level-Up-Erkennung, #5).
+ * Rückgabe der SQL-Funktion: vom Server vergebene EP sowie das serverseitig berechnete
+ * Level VOR und NACH der Vergabe (Level-Up-Erkennung, #5). Das ebenfalls gelieferte
+ * `total_xp` wird clientseitig nicht gebraucht (der Charakter wird nach dem Erfassen neu
+ * geladen) und dank `ignoreUnknownKeys` bewusst nicht modelliert.
  */
 @Serializable
 data class LogWorkoutResponse(
     @SerialName("xp_awarded") val xpAwarded: Long,
-    @SerialName("total_xp") val totalXp: Long,
     @SerialName("level_before") val levelBefore: Int,
     @SerialName("level_after") val levelAfter: Int
 )

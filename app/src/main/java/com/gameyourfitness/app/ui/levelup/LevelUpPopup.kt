@@ -17,7 +17,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -44,9 +43,12 @@ private const val SCRIM_ALPHA = 0.72f
  */
 @Composable
 fun LevelUpOverlay(level: Int?, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
-    var lastLevel by remember { mutableIntStateOf(Progression.START_LEVEL) }
-    LaunchedEffect(level) {
-        if (level != null) lastLevel = level
+    // Zuletzt sichtbares Level, damit die Exit-Animation nicht auf eine leere Zahl
+    // springt. Synchron (nicht per LaunchedEffect) gesetzt, damit beim Einblenden sofort
+    // das echte Level steht statt für einen Frame der Startwert.
+    var lastLevel by remember { mutableIntStateOf(level ?: Progression.START_LEVEL) }
+    if (level != null && level != lastLevel) {
+        lastLevel = level
     }
     AnimatedVisibility(
         visible = level != null,
