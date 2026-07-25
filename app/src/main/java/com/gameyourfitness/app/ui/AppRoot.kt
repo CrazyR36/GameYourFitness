@@ -1,6 +1,5 @@
 package com.gameyourfitness.app.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -16,6 +15,7 @@ import com.gameyourfitness.app.domain.auth.AuthState
 import com.gameyourfitness.app.ui.auth.AuthViewModel
 import com.gameyourfitness.app.ui.auth.LoginScreen
 import com.gameyourfitness.app.ui.character.CharacterRoute
+import com.gameyourfitness.app.ui.theme.atmosphericBackground
 
 /**
  * Schaltet ohne Navigation-Library zwischen Login- und Startbildschirm anhand
@@ -31,7 +31,7 @@ fun AppRoot(modifier: Modifier = Modifier, viewModel: AuthViewModel = hiltViewMo
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
+                    .atmosphericBackground()
                     .testTag("splash_loading"),
                 contentAlignment = Alignment.Center
             ) {

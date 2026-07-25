@@ -6,7 +6,9 @@ import androidx.compose.ui.unit.dp
 object Dimens {
     val screenPadding = 24.dp
     val systemWindowPadding = 24.dp
-    val systemWindowBorder = 1.dp
+    val systemWindowBorder = 1.5.dp
+    val glowElevation = 20.dp
+    val dividerThickness = 2.dp
     val contentSpacing = 16.dp
     val inlineProgressSize = 20.dp
     val progressStroke = 2.dp
