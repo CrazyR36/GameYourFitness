@@ -92,12 +92,18 @@ begin
     -- EP-Formel (Ganzzahl), identisch zu Progression.strengthWorkoutXp.
     v_xp := (p_sets::bigint * p_reps::bigint * (100 + p_weight_kg)) / 100;
 
-    -- Ausgangsstand sperren und Ausgangs-Level bestimmen.
+    -- Ausgangsstand sperren und Ausgangs-Level bestimmen. Fehlt die Profilzeile
+    -- (sollte durch den Signup-Trigger aus 0001 nie passieren), wird abgebrochen,
+    -- BEVOR Training/EP-Event geschrieben werden — kein inkonsistenter Zustand,
+    -- keine null-total_xp-Antwort.
     select total_xp into v_total_before
     from public.profiles
     where user_id = v_user_id
     for update;
-    v_level_before := public.level_for_xp(coalesce(v_total_before, 0));
+    if not found then
+        raise exception 'Kein Profil fuer Nutzer %', v_user_id using errcode = '42501';
+    end if;
+    v_level_before := public.level_for_xp(v_total_before);
 
     insert into public.strength_workouts (user_id, exercise, sets, reps, weight_kg, xp_awarded)
     values (v_user_id, v_exercise, p_sets, p_reps, p_weight_kg, v_xp)
